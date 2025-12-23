@@ -61,7 +61,7 @@
             
             <h1 class="text-xl font-bold tracking-wide text-white flex flex-col">
                 <span>Gerenciador Senaicast</span>
-                <span class="text-[10px] font-normal opacity-90 uppercase tracking-widest">Painel Administrativo</span>
+                <span class="text-[10px] font-normal opacity-90 uppercase tracking-widest">Painel Administrativo v3.0</span>
             </h1>
 
             <!-- Espaço para Logo da Instituição (Opcional) -->
@@ -182,7 +182,6 @@
                         </div>
                         <div class="mt-2 flex items-center bg-gray-700/50 rounded px-2">
                             <i class="fas fa-link text-gray-500 text-xs mr-2"></i>
-                            <!-- CORREÇÃO AQUI: Input liberado (sem readonly) e com oninput -->
                             <input type="text" id="edit-url" 
                                 class="bg-transparent border-none text-xs text-gray-300 w-full focus:ring-0 py-2" 
                                 placeholder="Cole aqui: Google Drive (Público), YouTube ou Link direto" 
@@ -244,12 +243,12 @@
         async function loadData() {
             Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
             try {
-                // CORREÇÃO: Busca QUALQUER linha de configuração (não força ID 1)
+                // Tenta buscar o primeiro registro existente
                 const { data, error } = await supabaseClient
                     .from('app_config')
                     .select('id, data')
                     .limit(1)
-                    .maybeSingle(); // maybeSingle evita erro se não tiver nada
+                    .maybeSingle();
 
                 if (error) throw error;
 
@@ -263,8 +262,7 @@
                     }
                     Swal.close();
                 } else {
-                    // Se estiver vazio, cria o primeiro registro
-                    saveToSupabase(true); 
+                    // Se não existe, vamos deixar o saveToSupabase criar
                     Swal.close();
                 }
             } catch (e) {
@@ -273,31 +271,21 @@
             }
         }
 
-        // --- PROCESSAMENTO DE LINKS (DRIVE / YOUTUBE) ---
+        // --- PROCESSAMENTO DE LINKS ---
         function processUrl(url) {
             if (!url) return "";
-            
-            // Google Drive
             const driveRegex = /\/file\/d\/([a-zA-Z0-9_-]+)/;
             const driveMatch = url.match(driveRegex);
-            if (driveMatch && driveMatch[1]) {
-                return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-            }
-
-            // Youtube
+            if (driveMatch && driveMatch[1]) return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
             if (url.includes('youtube.com/watch?v=') || url.includes('youtu.be/')) {
                 let vid = '';
                 if(url.includes('watch?v=')) vid = url.split('v=')[1].split('&')[0];
                 else if(url.includes('youtu.be/')) vid = url.split('youtu.be/')[1].split('?')[0];
-                
-                // Adiciona Autoplay no link do Youtube
                 if (vid) return `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}`;
             }
-
             return url;
         }
 
-        // Função chamada enquanto você digita a URL
         window.handleUrlInput = function(val) {
             const processed = processUrl(val);
             window.updatePreview(processed);
@@ -307,21 +295,12 @@
         async function handleSupabaseUpload(input) {
             const file = input.files[0];
             if (!file) return;
-
             document.getElementById('upload-overlay').classList.add('active');
-
             try {
                 const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`;
-                const { data, error } = await supabaseClient.storage
-                    .from('senaicast-media')
-                    .upload(fileName, file, { cacheControl: '3600', upsert: false });
-
+                const { data, error } = await supabaseClient.storage.from('senaicast-media').upload(fileName, file, { cacheControl: '3600', upsert: false });
                 if (error) throw error;
-
-                const { data: { publicUrl } } = supabaseClient.storage
-                    .from('senaicast-media')
-                    .getPublicUrl(fileName);
-
+                const { data: { publicUrl } } = supabaseClient.storage.from('senaicast-media').getPublicUrl(fileName);
                 const s = DATA.slides.find(x => x.id === currentSlideId);
                 if(s) {
                     s.url = publicUrl;
@@ -329,7 +308,6 @@
                     document.getElementById('edit-url').value = publicUrl;
                     updatePreview(publicUrl);
                 }
-
             } catch (e) {
                 console.error(e);
                 Swal.fire('Erro no Upload', e.message, 'error');
@@ -353,14 +331,24 @@
 
             try {
                 let error;
-                // CORREÇÃO CRÍTICA: Se já temos um ID, atualiza ele. Se não, cria um novo.
+                
+                // --- LÓGICA DE SALVAMENTO CORRIGIDA (EVITA ERRO DE ID) ---
+                
+                // 1. Tenta descobrir o ID novamente se não tivermos
+                if (!configId) {
+                    const { data: checkData } = await supabaseClient.from('app_config').select('id').limit(1).maybeSingle();
+                    if(checkData) configId = checkData.id;
+                }
+
                 if (configId) {
+                    // UPDATE: Se já temos o ID, atualizamos a linha específica
                     const res = await supabaseClient
                         .from('app_config')
                         .update({ data: cleanData })
                         .eq('id', configId);
                     error = res.error;
                 } else {
+                    // INSERT: Se não temos ID, criamos uma nova linha (deixando o ID gerar sozinho)
                     const res = await supabaseClient
                         .from('app_config')
                         .insert({ data: cleanData })
@@ -373,7 +361,7 @@
                 if (error) throw error;
                 if(!silent) Swal.fire('Sucesso!', 'TV Atualizada.', 'success');
             } catch (e) {
-                if(!silent) Swal.fire('Erro ao Salvar', e.message, 'error');
+                if(!silent) Swal.fire('Erro ao Salvar', e.message + "\n\n(Tente recarregar a página)", 'error');
             }
         }
 
@@ -418,7 +406,6 @@
             if (!s) return;
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-form').classList.remove('hidden');
-            
             document.getElementById('edit-title').value = s.title || "";
             document.getElementById('edit-category').value = s.category || "";
             document.getElementById('edit-message').value = s.message || "";
@@ -427,7 +414,6 @@
             document.getElementById('edit-startDate').value = s.startDate || '';
             document.getElementById('edit-endDate').value = s.endDate || '';
             document.getElementById('edit-url').value = s.url || '';
-            
             updatePreview(s.url);
             renderSlidesList();
         }
@@ -444,18 +430,14 @@
             s.duration = dur;
             s.startDate = document.getElementById('edit-startDate').value;
             s.endDate = document.getElementById('edit-endDate').value;
-            
-            // Pega a URL processada pelo input ou mantém a atual
             const urlInput = document.getElementById('edit-url').value;
             if(urlInput && urlInput !== s.url) {
                 const processed = processUrl(urlInput);
                 s.url = processed;
-                
                 if(s.url.match(/\.(mp4|webm)$/i)) s.mediaType = 'video';
                 else if(s.url.includes('youtube') || s.url.includes('drive')) s.mediaType = 'iframe';
                 else s.mediaType = 'image';
             }
-            
             Swal.fire({icon: 'success', title: 'Editado (Local)', text: 'Clique em SALVAR NA TV para publicar.', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
             renderSlidesList();
         }
@@ -473,11 +455,9 @@
         function updatePreview(url) {
             const div = document.getElementById('media-preview');
             if (!url) { div.innerHTML = 'Sem Mídia'; return; }
-            
             if (url.includes('youtube') || url.includes('iframe')) {
                  div.innerHTML = `<iframe src="${url}" class="h-full w-full border-0" allow="autoplay"></iframe>`;
             } else if (url.match(/\.(mp4|webm)$/i) || url.startsWith('data:video')) {
-                 // VIDEO AUTOPLAY
                  div.innerHTML = `<video src="${url}" class="h-full object-contain" controls autoplay muted loop></video>`;
             } else {
                  div.innerHTML = `<img src="${url}" class="h-full object-contain">`;
