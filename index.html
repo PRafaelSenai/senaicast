@@ -9,21 +9,19 @@
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Variáveis Padrão (serão sobrescritas pelo JS) */
+        /* Variáveis Padrão */
         :root { 
             --primary-color: #E30613; 
             --accent-color: #0047B6; 
             --text-scale: 1.0; 
             
-            /* Variáveis do Separador (Bolinha) */
-            --separator-color: #ffffff; 
-            --separator-spacing: 2rem; 
-            --separator-size: 1.5rem; /* Novo: Tamanho da bolinha */
-            
-            /* Novas Variáveis para o Ticker */
+            /* Ticker & Separador */
             --ticker-bg: #0047B6;
             --ticker-color: #FFFFFF;
             --ticker-duration: 30s;
+            --separator-color: #ffffff; 
+            --separator-spacing: 2rem; 
+            --separator-size: 1.5rem;
         }
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: white; overflow: hidden; font-size: calc(1rem * var(--text-scale)); }
@@ -37,9 +35,8 @@
         .sidebar { background: linear-gradient(135deg, var(--primary-color) 0%, #7f1d1d 100%); padding: 3rem; display: flex; flex-direction: column; justify-content: center; box-shadow: 5px 0 15px rgba(0,0,0,0.3); z-index: 10; }
         .media-viewer { position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
         .media-viewer img, .media-viewer video, .media-viewer iframe { width: 100%; height: 100%; object-fit: cover; border: none; }
-        .media-viewer iframe { object-fit: contain; }
         
-        /* Ticker Personalizado */
+        /* Ticker Style */
         .news-ticker { 
             background-color: var(--ticker-bg); 
             color: var(--ticker-color); 
@@ -54,21 +51,16 @@
             z-index: 20; 
         }
         .ticker-label { 
-            background-color: rgba(0,0,0,0.2); /* Escurece um pouco a cor de fundo */
+            background-color: rgba(0,0,0,0.2); 
             color: inherit; 
             padding: 0 2rem; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: 800; 
-            letter-spacing: 1px; 
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1); 
-            z-index: 21; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: 800; letter-spacing: 1px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 21; 
         }
         .ticker-track { overflow: hidden; display: flex; align-items: center; position: relative; }
         .ticker-content { display: inline-block; padding-left: 100%; animation: ticker var(--ticker-duration) linear infinite; }
         
-        /* Separador Personalizado */
+        /* Estilo da Bolinha (Separador) */
         .ticker-separator { 
             color: var(--separator-color); 
             margin: 0 var(--separator-spacing); 
@@ -77,15 +69,16 @@
             line-height: 0; 
             position: relative; 
             top: -2px; 
+            display: inline-block;
+            text-shadow: 0 0 5px rgba(0,0,0,0.3); /* Sombra para destacar */
         }
         
         @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
-        
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: white; display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s; }
     </style>
 </head>
 <body>
-    <div id="loading-overlay"><div><i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-blue-500"></i><br>Conectando ao Supabase...</div></div>
+    <div id="loading-overlay"><div><i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-blue-500"></i><br>Conectando...</div></div>
 
     <div id="tv-container" class="opacity-0 transition-opacity duration-1000">
         <div class="header-bar">
@@ -119,28 +112,21 @@
     </div>
 
     <script>
-        // --- 🔴 CONFIGURAÇÃO DO SUPABASE (COLE SUAS CHAVES AQUI TAMBÉM) 🔴 ---
         const SUPABASE_URL = "https://pmnmudyseicnroypcmcp.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_WCG4H3nty0gT0LevuIoPFw_ro40Huqh"; 
-        // ---------------------------------------------------------------------
 
         let supabaseClient;
         let SYSTEM_CONFIG = {};
         let currentSlideIndex = 0;
         let slideTimer = null;
 
-        window.onload = () => {
-            initSupabase();
-        };
+        window.onload = () => { initSupabase(); };
 
         function initSupabase() {
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                
-                // INSCRIÇÃO EM TEMPO REAL
                 supabaseClient.channel('public:app_config')
                     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_config', filter: 'id=eq.1' }, payload => {
-                        console.log('Update recebido!', payload);
                         if (payload.new && payload.new.data) {
                             SYSTEM_CONFIG = payload.new.data;
                             applyGlobalSettings();
@@ -148,11 +134,8 @@
                         }
                     })
                     .subscribe();
-
                 loadData();
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         async function loadData() {
@@ -160,11 +143,9 @@
             if (data && data.data) {
                 SYSTEM_CONFIG = data.data;
                 applyGlobalSettings();
-                
                 const loader = document.getElementById('loading-overlay');
                 if(loader) { loader.style.opacity = '0'; setTimeout(()=>loader.remove(),500); }
                 document.getElementById('tv-container').classList.remove('opacity-0');
-                
                 initTV();
             }
         }
@@ -175,27 +156,25 @@
             root.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor || '#0047B6');
             root.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom || "1.0");
             
-            // Configurações do Separador (Bolinha)
+            // Ticker Configs
             root.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor || '#ffffff');
             root.style.setProperty('--separator-spacing', (SYSTEM_CONFIG.separatorSpacing || 2) + 'rem');
-            // Se o tamanho não vier do banco ainda (admin antigo), usa padrão 1.5rem
             root.style.setProperty('--separator-size', (SYSTEM_CONFIG.separatorSize || 1.5) + 'rem');
             
-            // Novas Variáveis de Ticker
             root.style.setProperty('--ticker-bg', SYSTEM_CONFIG.tickerBg || SYSTEM_CONFIG.accentColor || '#0047B6');
             root.style.setProperty('--ticker-color', SYSTEM_CONFIG.tickerColor || '#FFFFFF');
             root.style.setProperty('--ticker-duration', (SYSTEM_CONFIG.tickerSpeed || 30) + 's');
             
             document.getElementById('display-school-name').innerText = SYSTEM_CONFIG.schoolName || "SENAI";
+            
+            // Separador (Bolinha) com classe específica
             const sepHtml = `<span class="ticker-separator">•</span>`;
             document.getElementById('display-ticker').innerHTML = (SYSTEM_CONFIG.tickerText || "").replace(/\|/g, sepHtml);
         }
 
         function initTV() {
             const now = new Date();
-            let activeSlides = SYSTEM_CONFIG.slides || [];
-
-            activeSlides = activeSlides.filter(s => {
+            let activeSlides = (SYSTEM_CONFIG.slides || []).filter(s => {
                 const start = s.startDate ? new Date(s.startDate) : null;
                 const end = s.endDate ? new Date(s.endDate) : null;
                 if (start && !isNaN(start.getTime()) && now < start) return false;
