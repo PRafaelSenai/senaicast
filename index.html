@@ -20,7 +20,7 @@
             --ticker-color: #FFFFFF;
             --ticker-duration: 30s;
             --separator-color: #ffffff; 
-            --separator-spacing: 2rem; 
+            --separator-spacing: 0.5rem; /* Padrão mais próximo */
             --separator-size: 1.5rem;
         }
 
@@ -63,7 +63,6 @@
         
         /* CORREÇÃO DO SEPARADOR */
         .ticker-separator { 
-            /* !important garante que a cor não seja sobrescrita pela cor do texto */
             color: var(--separator-color) !important; 
             margin: 0 var(--separator-spacing); 
             font-size: var(--separator-size); 
@@ -114,7 +113,7 @@
     </div>
 
     <script>
-        // --- 🔴 CONFIGURAÇÃO DO SUPABASE 🔴 ---
+        // --- 🔴 CONFIGURAÇÃO DO SUPABASE (COLE SUAS CHAVES AQUI TAMBÉM) 🔴 ---
         const SUPABASE_URL = "https://pmnmudyseicnroypcmcp.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_WCG4H3nty0gT0LevuIoPFw_ro40Huqh"; 
         // ---------------------------------------------------------------------
@@ -168,13 +167,12 @@
             root.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor || '#0047B6');
             root.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom || "1.0");
             
-            // Configurações do Separador (Bolinha)
+            // Ticker Configs
             root.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor || '#ffffff');
-            root.style.setProperty('--separator-spacing', (SYSTEM_CONFIG.separatorSpacing || 2) + 'rem');
-            // Se o tamanho não vier do banco, usa padrão 1.5rem
+            // IMPORTANTE: Default de 0.5rem se não vier nada
+            root.style.setProperty('--separator-spacing', (SYSTEM_CONFIG.separatorSpacing || 0.5) + 'rem');
             root.style.setProperty('--separator-size', (SYSTEM_CONFIG.separatorSize || 1.5) + 'rem');
             
-            // Variáveis de Ticker
             root.style.setProperty('--ticker-bg', SYSTEM_CONFIG.tickerBg || SYSTEM_CONFIG.accentColor || '#0047B6');
             root.style.setProperty('--ticker-color', SYSTEM_CONFIG.tickerColor || '#FFFFFF');
             root.style.setProperty('--ticker-duration', (SYSTEM_CONFIG.tickerSpeed || 30) + 's');
