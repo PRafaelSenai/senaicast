@@ -18,14 +18,28 @@
         .loading-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 50; display: none; flex-direction: column; }
         .loading-overlay.active { display: flex; }
         .senai-header { background-color: var(--senai-red, #E30613); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        
+        /* Estilo para seleção de ícones */
+        .icon-option { cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; }
+        .icon-option:hover { background-color: #4b5563; }
+        .icon-option.selected { background-color: #E30613; color: white; }
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
 
+    <!-- CABEÇALHO ATUALIZADO COM LOGO E ESCOLA -->
     <header class="senai-header h-20 flex items-center justify-between px-6 shrink-0 z-20">
-        <div class="flex items-center gap-3">
-            <div class="bg-white text-red-600 w-8 h-8 rounded flex items-center justify-center font-bold shadow"><i class="fas fa-fire"></i></div>
-            <h1 class="text-lg font-bold tracking-wide">Gerenciador Senaicast</h1>
+        <div class="flex items-center gap-4">
+            <!-- Logo SENAI -->
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/SENAI_S%C3%A3o_Paulo_logo.png/1200px-SENAI_S%C3%A3o_Paulo_logo.png" alt="Logo SENAI" class="h-10 bg-white px-2 py-1 rounded shadow-sm">
+            
+            <div class="h-8 w-px bg-white/30"></div>
+            
+            <div class="flex flex-col">
+                <h1 class="text-lg font-bold tracking-wide text-white leading-tight">Gerenciador Senaicast</h1>
+                <!-- Nome da Escola Dinâmico -->
+                <span id="header-school-name" class="text-xs font-medium text-white/80 uppercase tracking-wide">Carregando escola...</span>
+            </div>
         </div>
         <div class="flex items-center gap-4">
             <button onclick="saveToSupabase()" class="bg-white text-red-600 hover:bg-gray-100 px-6 py-2 rounded font-bold shadow-lg flex items-center gap-2 transform hover:scale-105 transition">
@@ -43,15 +57,9 @@
             
             <h3 class="text-xs font-bold text-yellow-500 uppercase border-b border-gray-700 pb-2 mt-4">Rodapé / Letreiro</h3>
             
-            <!-- CONTROLES DO SEPARADOR (BOLINHA) -->
             <div class="bg-gray-700/30 p-2 rounded border border-gray-600">
                 <label class="text-[10px] text-gray-400 font-bold uppercase mb-2 block">Separador (Bolinha)</label>
-                
-                <div class="mb-2">
-                    <label class="text-xs text-gray-300 block mb-1">Cor</label>
-                    <input type="color" id="conf-sep-color" class="h-8 w-full rounded cursor-pointer">
-                </div>
-
+                <div class="mb-2"><label class="text-xs text-gray-300 block mb-1">Cor</label><input type="color" id="conf-sep-color" class="h-8 w-full rounded cursor-pointer"></div>
                 <div class="mb-2">
                     <label class="text-xs text-gray-300 block mb-1">Tamanho</label>
                     <div class="flex items-center gap-2">
@@ -59,38 +67,36 @@
                         <span id="size-val" class="text-xs text-gray-400 w-10 text-right">1.5rem</span>
                     </div>
                 </div>
-
                 <div>
                     <label class="text-xs text-gray-300 block mb-1">Espaçamento</label>
                     <div class="flex items-center gap-2">
-                        <!-- Ajuste: Mínimo 0.1 para permitir bem próximo -->
                         <input type="range" id="conf-sep-spacing" min="0.1" max="5" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500">
                         <span id="spacing-val" class="text-xs text-gray-400 w-10 text-right">0.5rem</span>
                     </div>
                 </div>
             </div>
 
-            <!-- CONTROLES DO TICKER -->
             <div class="bg-gray-700/30 p-2 rounded border border-gray-600">
                 <label class="text-[10px] text-gray-400 font-bold uppercase mb-2 block">Texto / Fundo</label>
                 <div class="flex gap-2 mb-2">
                     <div class="flex-1"><label class="text-[10px] text-gray-400">Fundo</label><input type="color" id="conf-ticker-bg" class="h-8 w-full rounded cursor-pointer"></div>
                     <div class="flex-1"><label class="text-[10px] text-gray-400">Texto</label><input type="color" id="conf-ticker-text" class="h-8 w-full rounded cursor-pointer"></div>
                 </div>
-                <div>
-                    <label class="text-[10px] text-gray-400">Velocidade (seg)</label>
-                    <input type="range" id="conf-ticker-speed" min="10" max="120" step="5" class="w-full h-2 bg-gray-600 rounded-lg accent-yellow-500">
-                </div>
+                <div><label class="text-[10px] text-gray-400">Velocidade (seg)</label><input type="range" id="conf-ticker-speed" min="10" max="120" step="5" class="w-full h-2 bg-gray-600 rounded-lg accent-yellow-500"></div>
             </div>
 
             <div>
                 <label class="text-xs text-gray-300 block mb-1">Notícias</label>
-                <textarea id="conf-ticker" class="input-dark h-20 text-xs" placeholder="Notícia 1 | Notícia 2 | Notícia 3"></textarea>
-                <p class="text-[10px] text-gray-500 mt-1 text-right">Use <strong>|</strong> para criar a bolinha separadora.</p>
+                <div class="flex flex-wrap gap-1 mb-1 bg-gray-800 p-1 rounded" id="ticker-icon-toolbar"></div>
+                <textarea id="conf-ticker" class="input-dark h-24 text-xs" placeholder="Notícia 1 | Notícia 2"></textarea>
+                <p class="text-[10px] text-gray-500 mt-1 text-right">Clique nos ícones acima para inserir.</p>
             </div>
             
             <h3 class="text-xs font-bold text-yellow-500 uppercase border-b border-gray-700 pb-2 mt-4">Escola</h3>
-            <div><label class="text-xs text-gray-300 block mb-1">Nome da Escola</label><textarea id="conf-school" class="input-dark h-12 text-xs"></textarea></div>
+            <div>
+                <label class="text-xs text-gray-300 block mb-1">Nome da Escola</label>
+                <textarea id="conf-school" class="input-dark h-12 text-xs" oninput="updateSchoolNameDisplay(this.value)"></textarea>
+            </div>
         </aside>
 
         <!-- Sidebar Slides -->
@@ -111,7 +117,6 @@
                 <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-xl space-y-6 relative">
                     <div id="upload-overlay" class="loading-overlay rounded-xl"><i class="fas fa-circle-notch fa-spin text-4xl text-white mb-2"></i><span class="font-bold text-sm">Enviando...</span></div>
                     
-                    <!-- Mídia -->
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Mídia</label>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -125,16 +130,28 @@
                     </div>
                     
                     <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-xs font-bold text-gray-400">Categoria</label><input type="text" id="edit-category" class="input-dark"></div>
-                        <div><label class="block text-xs font-bold text-gray-400">Layout</label><select id="edit-layout" class="input-dark"><option value="default">Padrão</option><option value="fullscreen">Tela Cheia</option></select></div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-1">Categoria & Ícone</label>
+                            <div class="flex gap-2">
+                                <div class="relative">
+                                    <button id="cat-icon-btn" class="input-dark w-10 h-full flex items-center justify-center text-lg hover:bg-gray-600" onclick="toggleIconPicker()">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                    <input type="hidden" id="edit-category-icon" value="fas fa-info-circle">
+                                    <div id="icon-picker-dropdown" class="hidden absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 p-2 rounded shadow-xl z-50 grid grid-cols-5 gap-1 w-48"></div>
+                                </div>
+                                <input type="text" id="edit-category" class="input-dark flex-1" placeholder="Ex: Aviso">
+                            </div>
+                        </div>
+                        <div><label class="block text-xs font-bold text-gray-400 mb-1">Layout</label><select id="edit-layout" class="input-dark"><option value="default">Padrão</option><option value="fullscreen">Tela Cheia</option></select></div>
                     </div>
-                    <div><label class="block text-xs font-bold text-gray-400">Título</label><input type="text" id="edit-title" class="input-dark text-lg font-bold"></div>
-                    <div><label class="block text-xs font-bold text-gray-400">Mensagem</label><textarea id="edit-message" class="input-dark h-24"></textarea></div>
+                    <div><label class="block text-xs font-bold text-gray-400 mb-1">Título</label><input type="text" id="edit-title" class="input-dark text-lg font-bold"></div>
+                    <div><label class="block text-xs font-bold text-gray-400 mb-1">Mensagem</label><textarea id="edit-message" class="input-dark h-24"></textarea></div>
                     
                     <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-600 grid grid-cols-3 gap-4">
-                        <div><label class="block text-[10px] text-gray-400">Início</label><input type="datetime-local" id="edit-startDate" class="input-dark text-xs"></div>
-                        <div><label class="block text-[10px] text-gray-400">Término</label><input type="datetime-local" id="edit-endDate" class="input-dark text-xs"></div>
-                        <div><label class="block text-[10px] text-gray-400">Duração (s)</label><input type="number" id="edit-duration" class="input-dark text-xs" value="10"></div>
+                        <div><label class="block text-[10px] text-gray-400 mb-1">Início</label><input type="datetime-local" id="edit-startDate" class="input-dark text-xs"></div>
+                        <div><label class="block text-[10px] text-gray-400 mb-1">Término</label><input type="datetime-local" id="edit-endDate" class="input-dark text-xs"></div>
+                        <div><label class="block text-[10px] text-gray-400 mb-1">Duração (s)</label><input type="number" id="edit-duration" class="input-dark text-xs" value="10"></div>
                     </div>
 
                     <div class="flex justify-between pt-2">
@@ -147,24 +164,61 @@
     </div>
 
     <script>
-        // --- 🔴 CONFIGURAÇÃO SUPABASE 🔴 ---
         const SUPABASE_URL = "https://pmnmudyseicnroypcmcp.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_WCG4H3nty0gT0LevuIoPFw_ro40Huqh"; 
-        // -----------------------------------
 
         let supabaseClient;
         let DATA = { slides: [], primaryColor: "#E30613", accentColor: "#0047B6" };
         let currentSlideId = null;
         let configId = null;
 
+        const AVAILABLE_ICONS = [
+            'fas fa-bullhorn', 'fas fa-info-circle', 'fas fa-exclamation-triangle',
+            'fas fa-calendar-alt', 'fas fa-clock', 'fas fa-check-circle',
+            'fas fa-utensils', 'fas fa-book', 'fas fa-graduation-cap',
+            'fas fa-tools', 'fas fa-laptop-code', 'fas fa-award',
+            'fas fa-star', 'fas fa-heart', 'fas fa-wifi'
+        ];
+
         window.onload = () => {
             try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); loadData(); } 
             catch(e) { console.error(e); }
-            
-            // Listeners para Sliders
+            setupIconPickers();
             document.getElementById('conf-sep-size').addEventListener('input', e => document.getElementById('size-val').innerText = e.target.value + 'rem');
             document.getElementById('conf-sep-spacing').addEventListener('input', e => document.getElementById('spacing-val').innerText = e.target.value + 'rem');
         };
+
+        function setupIconPickers() {
+            const dropdown = document.getElementById('icon-picker-dropdown');
+            AVAILABLE_ICONS.forEach(icon => {
+                const btn = document.createElement('div');
+                btn.className = 'icon-option text-gray-300 hover:text-white';
+                btn.innerHTML = `<i class="${icon}"></i>`;
+                btn.onclick = () => selectCategoryIcon(icon);
+                dropdown.appendChild(btn);
+            });
+            const toolbar = document.getElementById('ticker-icon-toolbar');
+            AVAILABLE_ICONS.forEach(icon => {
+                const btn = document.createElement('button');
+                btn.className = 'text-gray-400 hover:text-yellow-500 w-6 h-6 flex items-center justify-center';
+                btn.innerHTML = `<i class="${icon}"></i>`;
+                btn.title = 'Inserir ' + icon;
+                btn.onclick = () => insertIconInTicker(`<i class="${icon} mr-1"></i>`);
+                toolbar.appendChild(btn);
+            });
+        }
+        function toggleIconPicker() { document.getElementById('icon-picker-dropdown').classList.toggle('hidden'); }
+        function selectCategoryIcon(iconClass) {
+            document.getElementById('edit-category-icon').value = iconClass;
+            document.getElementById('cat-icon-btn').innerHTML = `<i class="${iconClass}"></i>`;
+            document.getElementById('icon-picker-dropdown').classList.add('hidden');
+        }
+        function insertIconInTicker(html) { document.getElementById('conf-ticker').value += ' ' + html + ' '; }
+        
+        function updateSchoolNameDisplay(val) {
+            const el = document.getElementById('header-school-name');
+            if(el) el.innerText = val || 'SENAI';
+        }
 
         async function loadData() {
             Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
@@ -191,16 +245,12 @@
             DATA.primaryColor = document.getElementById('conf-primary').value;
             DATA.accentColor = document.getElementById('conf-accent').value;
             DATA.zoom = document.getElementById('conf-zoom').value;
-            
-            // Novos campos
             DATA.separatorColor = document.getElementById('conf-sep-color').value;
             DATA.separatorSize = document.getElementById('conf-sep-size').value;
             DATA.separatorSpacing = document.getElementById('conf-sep-spacing').value;
-            
             DATA.tickerBg = document.getElementById('conf-ticker-bg').value;
             DATA.tickerColor = document.getElementById('conf-ticker-text').value;
             DATA.tickerSpeed = document.getElementById('conf-ticker-speed').value;
-
             DATA.tickerText = document.getElementById('conf-ticker').value;
             DATA.schoolName = document.getElementById('conf-school').value;
 
@@ -228,37 +278,34 @@
             document.getElementById('conf-primary').value = DATA.primaryColor || '#E30613';
             document.getElementById('conf-accent').value = DATA.accentColor || '#0047B6';
             document.getElementById('conf-zoom').value = DATA.zoom || 1.0;
-            
             document.getElementById('conf-sep-color').value = DATA.separatorColor || '#ffffff';
             document.getElementById('conf-sep-size').value = DATA.separatorSize || 1.5;
             document.getElementById('size-val').innerText = (DATA.separatorSize || 1.5) + 'rem';
-            
             document.getElementById('conf-sep-spacing').value = DATA.separatorSpacing || 0.5;
             document.getElementById('spacing-val').innerText = (DATA.separatorSpacing || 0.5) + 'rem';
-            
             document.getElementById('conf-ticker-bg').value = DATA.tickerBg || '#0047B6';
             document.getElementById('conf-ticker-text').value = DATA.tickerColor || '#ffffff';
             document.getElementById('conf-ticker-speed').value = DATA.tickerSpeed || 30;
-
             document.getElementById('conf-ticker').value = DATA.tickerText || '';
             document.getElementById('conf-school').value = DATA.schoolName || '';
+            updateSchoolNameDisplay(DATA.schoolName);
         }
 
-        // ... Restante das funções (renderSlidesList, handleSupabaseUpload, etc) são iguais ...
         function renderSlidesList() {
             const list = document.getElementById('slides-list'); list.innerHTML = '';
             (DATA.slides || []).forEach(s => {
                 const div = document.createElement('div');
                 div.className = `slide-card p-3 rounded cursor-pointer border border-transparent hover:bg-gray-800 mb-2 ${s.id === currentSlideId ? 'active' : 'bg-gray-800/50'}`;
                 div.onclick = () => loadSlide(s.id);
-                div.innerHTML = `<div class="font-bold text-sm truncate">${s.title}</div><div class="text-xs text-gray-400">${s.category}</div>`;
+                const iconHtml = s.categoryIcon ? `<i class="${s.categoryIcon} mr-1 text-yellow-500"></i>` : '';
+                div.innerHTML = `<div class="font-bold text-sm truncate">${s.title}</div><div class="text-xs text-gray-400">${iconHtml}${s.category}</div>`;
                 list.appendChild(div);
             });
         }
         function addNewSlide() {
             const id = Date.now();
             if(!DATA.slides) DATA.slides = [];
-            DATA.slides.push({ id, category: 'Aviso', title: 'Novo', message: '', layout: 'default', mediaType: 'image', url: '', duration: 10 });
+            DATA.slides.push({ id, category: 'Aviso', categoryIcon: 'fas fa-info-circle', title: 'Novo', message: '', layout: 'default', mediaType: 'image', url: '', duration: 10 });
             loadSlide(id); renderSlidesList();
         }
         function loadSlide(id) {
@@ -269,6 +316,8 @@
             document.getElementById('editor-form').classList.remove('hidden');
             document.getElementById('edit-title').value = s.title || "";
             document.getElementById('edit-category').value = s.category || "";
+            const icon = s.categoryIcon || 'fas fa-info-circle';
+            selectCategoryIcon(icon);
             document.getElementById('edit-message').value = s.message || "";
             document.getElementById('edit-layout').value = s.layout || "default";
             document.getElementById('edit-duration').value = s.duration || 10;
@@ -283,6 +332,7 @@
             if (!s) return;
             s.title = document.getElementById('edit-title').value;
             s.category = document.getElementById('edit-category').value;
+            s.categoryIcon = document.getElementById('edit-category-icon').value;
             s.message = document.getElementById('edit-message').value;
             s.layout = document.getElementById('edit-layout').value;
             s.duration = parseInt(document.getElementById('edit-duration').value) || 10;
