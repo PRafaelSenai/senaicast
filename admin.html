@@ -61,10 +61,9 @@
             
             <h1 class="text-xl font-bold tracking-wide text-white flex flex-col">
                 <span>Gerenciador Senaicast</span>
-                <span class="text-[10px] font-normal opacity-90 uppercase tracking-widest">Painel Administrativo v3.0</span>
+                <span class="text-[10px] font-normal opacity-90 uppercase tracking-widest">Painel Administrativo v3.1</span>
             </h1>
 
-            <!-- Espaço para Logo da Instituição (Opcional) -->
             <div id="school-logo-container" class="hidden md:flex items-center ml-4 bg-white/10 px-3 py-1 rounded">
                 <i class="fas fa-university text-white/70 mr-2 text-xs"></i>
                 <span id="school-name-display" class="text-xs font-semibold truncate max-w-[150px]">Sua Escola</span>
@@ -83,7 +82,6 @@
         <!-- SIDEBAR CONFIG -->
         <aside class="w-72 bg-gray-800 border-r border-gray-700 overflow-y-auto flex flex-col custom-scrollbar p-5 space-y-6">
             
-            <!-- Aviso de Conexão -->
             <div id="connection-status" class="text-xs text-center p-2 rounded bg-green-900/30 text-green-400 border border-green-800">
                 <i class="fas fa-wifi mr-1"></i> Conectado ao Supabase
             </div>
@@ -91,7 +89,7 @@
             <!-- Aparência -->
             <div>
                 <h3 class="text-xs font-bold text-gray-400 uppercase border-b border-gray-600 pb-1 mb-3 flex items-center">
-                    <i class="fas fa-palette mr-2 text-[#0047B6]"></i> Visual
+                    <i class="fas fa-palette mr-2 text-[#0047B6]"></i> Visual Geral
                 </h3>
                 <div class="space-y-3">
                     <div>
@@ -108,13 +106,33 @@
                 </div>
             </div>
 
-            <!-- Rodapé -->
+            <!-- Rodapé / Ticker -->
             <div>
                 <h3 class="text-xs font-bold text-gray-400 uppercase border-b border-gray-600 pb-1 mb-3 flex items-center">
-                    <i class="fas fa-newspaper mr-2 text-[#0047B6]"></i> Rodapé
+                    <i class="fas fa-newspaper mr-2 text-[#0047B6]"></i> Rodapé (Notícias)
                 </h3>
                 <div class="space-y-3">
+                    <!-- Novas Cores do Ticker -->
+                    <div>
+                        <label class="text-xs text-gray-400">Cores do Ticker (Fundo / Texto)</label>
+                        <div class="flex gap-2">
+                            <input type="color" id="conf-ticker-bg" class="h-8 flex-1 rounded cursor-pointer bg-transparent border border-gray-600" title="Cor de Fundo do Letreiro">
+                            <input type="color" id="conf-ticker-text" class="h-8 flex-1 rounded cursor-pointer bg-transparent border border-gray-600" title="Cor do Texto do Letreiro">
+                        </div>
+                    </div>
+                    
                     <div><label class="text-xs text-gray-400">Cor do Separador</label><input type="color" id="conf-sep-color" class="h-8 w-full rounded cursor-pointer bg-transparent border border-gray-600"></div>
+                    
+                    <!-- Velocidade -->
+                    <div>
+                        <label class="text-xs text-gray-400 flex justify-between">
+                            <span>Velocidade (Segundos)</span>
+                            <span id="speed-display" class="text-[#E30613] font-bold">30s</span>
+                        </label>
+                        <input type="range" id="conf-ticker-speed" min="20" max="120" step="5" class="w-full h-2 bg-gray-600 rounded-lg accent-[#E30613]" oninput="updateSpeedDisplay(this.value)">
+                        <p class="text-[9px] text-gray-500 mt-1 text-right">* Quanto maior, mais lento.</p>
+                    </div>
+
                     <div><label class="text-xs text-gray-400">Notícias (Ticker)</label><textarea id="conf-ticker" class="input-dark h-20 text-xs"></textarea></div>
                 </div>
             </div>
@@ -221,11 +239,18 @@
         // --------------------------------
 
         let supabaseClient;
-        let DATA = { slides: [], primaryColor: "#E30613", accentColor: "#0047B6" };
+        // Adicionados campos padrão para Ticker
+        let DATA = { 
+            slides: [], 
+            primaryColor: "#E30613", 
+            accentColor: "#0047B6",
+            tickerBg: "#0047B6",
+            tickerColor: "#FFFFFF",
+            tickerSpeed: 30
+        };
         let currentSlideId = null;
-        let configId = null; // Armazena o ID real da configuração no banco
+        let configId = null;
 
-        // INICIALIZAÇÃO
         window.onload = () => {
             initSupabase();
         };
@@ -243,17 +268,11 @@
         async function loadData() {
             Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
             try {
-                // Tenta buscar o primeiro registro existente
-                const { data, error } = await supabaseClient
-                    .from('app_config')
-                    .select('id, data')
-                    .limit(1)
-                    .maybeSingle();
-
+                const { data, error } = await supabaseClient.from('app_config').select('id, data').limit(1).maybeSingle();
                 if (error) throw error;
 
                 if (data) {
-                    configId = data.id; // Guarda o ID que veio do banco
+                    configId = data.id;
                     if (data.data) {
                         DATA = { ...DATA, ...data.data };
                         if (!Array.isArray(DATA.slides)) DATA.slides = [];
@@ -262,7 +281,7 @@
                     }
                     Swal.close();
                 } else {
-                    // Se não existe, vamos deixar o saveToSupabase criar
+                    saveToSupabase(true); 
                     Swal.close();
                 }
             } catch (e) {
@@ -271,7 +290,11 @@
             }
         }
 
-        // --- PROCESSAMENTO DE LINKS ---
+        function updateSpeedDisplay(val) {
+            document.getElementById('speed-display').innerText = val + 's';
+        }
+
+        // --- UPLOAD & LINKS ---
         function processUrl(url) {
             if (!url) return "";
             const driveRegex = /\/file\/d\/([a-zA-Z0-9_-]+)/;
@@ -291,7 +314,6 @@
             window.updatePreview(processed);
         }
 
-        // --- UPLOAD ---
         async function handleSupabaseUpload(input) {
             const file = input.files[0];
             if (!file) return;
@@ -324,6 +346,11 @@
             DATA.separatorColor = document.getElementById('conf-sep-color').value;
             DATA.tickerText = document.getElementById('conf-ticker').value;
             DATA.schoolName = document.getElementById('conf-school').value;
+            
+            // Novos campos do Ticker
+            DATA.tickerBg = document.getElementById('conf-ticker-bg').value;
+            DATA.tickerColor = document.getElementById('conf-ticker-text').value;
+            DATA.tickerSpeed = document.getElementById('conf-ticker-speed').value;
 
             const cleanData = JSON.parse(JSON.stringify(DATA));
 
@@ -331,46 +358,33 @@
 
             try {
                 let error;
-                
-                // --- LÓGICA DE SALVAMENTO CORRIGIDA (EVITA ERRO DE ID) ---
-                
-                // 1. Tenta descobrir o ID novamente se não tivermos
-                if (!configId) {
-                    const { data: checkData } = await supabaseClient.from('app_config').select('id').limit(1).maybeSingle();
-                    if(checkData) configId = checkData.id;
-                }
-
                 if (configId) {
-                    // UPDATE: Se já temos o ID, atualizamos a linha específica
-                    const res = await supabaseClient
-                        .from('app_config')
-                        .update({ data: cleanData })
-                        .eq('id', configId);
+                    const res = await supabaseClient.from('app_config').update({ data: cleanData }).eq('id', configId);
                     error = res.error;
                 } else {
-                    // INSERT: Se não temos ID, criamos uma nova linha (deixando o ID gerar sozinho)
-                    const res = await supabaseClient
-                        .from('app_config')
-                        .insert({ data: cleanData })
-                        .select('id')
-                        .single();
+                    const res = await supabaseClient.from('app_config').insert({ data: cleanData }).select('id').single();
                     if (res.data) configId = res.data.id;
                     error = res.error;
                 }
-
                 if (error) throw error;
                 if(!silent) Swal.fire('Sucesso!', 'TV Atualizada.', 'success');
             } catch (e) {
-                if(!silent) Swal.fire('Erro ao Salvar', e.message + "\n\n(Tente recarregar a página)", 'error');
+                if(!silent) Swal.fire('Erro ao Salvar', e.message, 'error');
             }
         }
 
-        // --- UI HELPERS ---
         function populateUI() {
             document.getElementById('conf-primary').value = DATA.primaryColor || '#E30613';
             document.getElementById('conf-accent').value = DATA.accentColor || '#0047B6';
             document.getElementById('conf-zoom').value = DATA.zoom || 1.0;
+            
+            // Ticker Configs
             document.getElementById('conf-sep-color').value = DATA.separatorColor || '#000000';
+            document.getElementById('conf-ticker-bg').value = DATA.tickerBg || DATA.accentColor || '#0047B6';
+            document.getElementById('conf-ticker-text').value = DATA.tickerColor || '#FFFFFF';
+            document.getElementById('conf-ticker-speed').value = DATA.tickerSpeed || 30;
+            updateSpeedDisplay(DATA.tickerSpeed || 30);
+
             document.getElementById('conf-ticker').value = DATA.tickerText || '';
             document.getElementById('conf-school').value = DATA.schoolName || '';
             updateSchoolNameDisplay(DATA.schoolName);
