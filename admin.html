@@ -1,214 +1,542 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin – Painel TV</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
-      margin: 0;
-      padding: 20px;
-    }
-    h1, h2 {
-      margin-top: 0;
-    }
-    section {
-      background: #1e1e1e;
-      padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 6px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    input, select, textarea, button {
-      width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      border-radius: 4px;
-      border: none;
-      font-size: 14px;
-    }
-    textarea {
-      resize: vertical;
-    }
-    button {
-      background: #16a34a;
-      color: #fff;
-      cursor: pointer;
-      margin-top: 15px;
-    }
-    button.danger {
-      background: #dc2626;
-    }
-    .slide-item {
-      border: 1px solid #333;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 4px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Painel SENAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        
+        .input-dark {
+            width: 100%;
+            background-color: #374151;
+            border: 1px solid #4b5563;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+        .input-dark:focus { border-color: #facc15; outline: none; }
+        .slide-card.active { border-left: 4px solid #facc15; background-color: #374151; }
+    </style>
 </head>
-<body>
+<body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
 
-<h1>Admin – Painel TV</h1>
+    <!-- LOGIN MODAL -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 p-8 rounded-xl max-w-md w-full border border-gray-700 shadow-2xl">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-white"><i class="fas fa-lock text-yellow-500 mr-2"></i>Acesso Restrito</h2>
+                <p class="text-gray-400 text-sm mt-2">Conecte-se ao repositório para gerenciar</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Usuário GitHub</label>
+                    <input type="text" id="gh-user" value="PRafaelSenai" class="input-dark">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Repositório</label>
+                    <input type="text" id="gh-repo" value="senaicast" class="input-dark">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Token de Acesso (PAT)</label>
+                    <input type="password" id="gh-token" class="input-dark" placeholder="Cole seu token ghp_... aqui">
+                </div>
+                <button onclick="saveAuth()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded mt-2 transition">
+                    CONECTAR PAINEL
+                </button>
+            </div>
+        </div>
+    </div>
 
-<section>
-  <h2>Configurações Gerais</h2>
+    <!-- HEADER -->
+    <header class="bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-6 shrink-0 z-20">
+        <div class="flex items-center gap-3">
+            <div class="bg-yellow-500 text-black w-8 h-8 rounded flex items-center justify-center font-bold"><i class="fas fa-tv"></i></div>
+            <h1 class="text-lg font-bold tracking-wide">Painel SENAI</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="loadDataFromGit()" class="text-gray-400 hover:text-white text-sm"><i class="fas fa-sync-alt mr-1"></i> Recarregar</button>
+            <div class="h-6 w-px bg-gray-600"></div>
+            <button onclick="publishToGit()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold shadow-lg flex items-center gap-2 transform hover:scale-105 transition">
+                <i class="fas fa-cloud-upload-alt"></i> PUBLICAR NA TV
+            </button>
+            <button onclick="logout()" class="text-red-400 hover:text-red-300 ml-2" title="Sair"><i class="fas fa-sign-out-alt fa-lg"></i></button>
+        </div>
+    </header>
 
-  <label>Nome da Escola
-    <input id="schoolName" />
-  </label>
+    <!-- ÁREA PRINCIPAL -->
+    <div class="flex flex-1 overflow-hidden" id="main-interface" class="hidden">
+        
+        <!-- SIDEBAR CONFIGURAÇÃO -->
+        <aside class="w-72 bg-gray-800 border-r border-gray-700 overflow-y-auto flex flex-col custom-scrollbar">
+            <div class="p-5">
+                <h3 class="text-xs font-bold text-yellow-500 uppercase tracking-wider mb-4 border-b border-gray-700 pb-2">
+                    <i class="fas fa-paint-brush mr-1"></i> Editor & Aparência
+                </h3>
+                
+                <div class="space-y-5">
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-1">Cor Principal</label>
+                        <div class="flex gap-2">
+                            <input type="color" id="conf-primary" class="h-9 w-12 rounded cursor-pointer p-0 border-0 bg-transparent">
+                            <input type="text" id="conf-primary-text" class="input-dark text-xs flex-1" readonly>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-1">Cor de Destaque</label>
+                        <div class="flex gap-2">
+                            <input type="color" id="conf-accent" class="h-9 w-12 rounded cursor-pointer p-0 border-0 bg-transparent">
+                            <input type="text" id="conf-accent-text" class="input-dark text-xs flex-1" readonly>
+                        </div>
+                    </div>
 
-  <label>Texto do Rodapé
-    <input id="tickerText" />
-  </label>
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-1 flex justify-between">
+                            <span>Zoom da Fonte</span>
+                            <span id="zoom-val" class="text-yellow-500 font-bold">100%</span>
+                        </label>
+                        <input type="range" id="conf-zoom" min="0.8" max="1.5" step="0.1" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-yellow-500">
+                    </div>
 
-  <label>Cor Primária
-    <input type="color" id="primaryColor" />
-  </label>
+                    <div class="h-px bg-gray-700"></div>
 
-  <label>Cor de Destaque
-    <input type="color" id="accentColor" />
-  </label>
+                    <h3 class="text-xs font-bold text-yellow-500 uppercase tracking-wider border-b border-gray-700 pb-2">
+                        <i class="fas fa-bullhorn mr-1"></i> Rodapé / Avisos
+                    </h3>
 
-  <label>Zoom do Texto
-    <input type="number" step="0.1" id="zoom" />
-  </label>
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-1">Cor do Separador</label>
+                        <input type="color" id="conf-sep-color" class="h-8 w-full rounded cursor-pointer bg-transparent border border-gray-600">
+                    </div>
 
-  <label>Espaçamento Separador
-    <input type="number" id="separatorSpacing" />
-  </label>
-</section>
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-1">Espaçamento</label>
+                        <div class="flex items-center gap-2">
+                            <input type="range" id="conf-sep-spacing-range" min="1" max="10" step="0.5" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500">
+                            <span id="spacing-val" class="text-xs text-gray-400 w-10 text-right">2.0rem</span>
+                        </div>
+                        <input type="hidden" id="conf-sep-spacing"> 
+                    </div>
 
-<section>
-  <h2>Slides</h2>
-  <div id="slides"></div>
-  <button onclick="addSlide()">➕ Adicionar Slide</button>
-</section>
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-1">Notícias (separe por | )</label>
+                        <textarea id="conf-ticker" class="input-dark h-24 text-xs leading-relaxed"></textarea>
+                    </div>
 
-<button onclick="publish()">💾 Publicar no GitHub</button>
+                    <div class="h-px bg-gray-700"></div>
 
-<script>
-const GITHUB = {
-  owner: "SEU_USUARIO",
-  repo: "SEU_REPOSITORIO",
-  path: "data.json",
-  token: "SEU_TOKEN_FINE_GRAINED"
-};
+                    <h3 class="text-xs font-bold text-yellow-500 uppercase tracking-wider border-b border-gray-700 pb-2">
+                        <i class="fas fa-university mr-1"></i> Institucional
+                    </h3>
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-1">Nome da Escola</label>
+                        <textarea id="conf-school" class="input-dark h-16 text-xs"></textarea>
+                    </div>
+                </div>
+            </div>
+        </aside>
 
-let DATA = {};
-let FILE_SHA = null;
+        <!-- SIDEBAR LISTA -->
+        <aside class="w-80 bg-gray-900 border-r border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800">
+                <h3 class="font-bold text-sm text-white">Slides</h3>
+                <button onclick="addNewSlide()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded font-bold transition">
+                    <i class="fas fa-plus mr-1"></i> NOVO
+                </button>
+            </div>
+            <div id="slides-list" class="flex-1 overflow-y-auto p-2 space-y-2">
+                <!-- Lista -->
+            </div>
+        </aside>
 
-async function loadData() {
-  const res = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.path}`);
-  const json = await res.json();
+        <!-- EDITOR -->
+        <main class="flex-1 bg-black relative">
+            <div id="no-selection" class="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
+                <i class="fas fa-hand-pointer text-5xl mb-4 opacity-50"></i>
+                <p>Selecione um slide na lista para editar</p>
+            </div>
 
-  FILE_SHA = json.sha;
-  DATA = JSON.parse(atob(json.content));
+            <div id="editor-form" class="hidden absolute inset-0 overflow-y-auto p-8 bg-gray-900">
+                <div class="max-w-4xl mx-auto">
+                    <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                            <span class="w-2 h-8 bg-yellow-500 rounded"></span> Editar Slide
+                        </h2>
+                        <button onclick="deleteSlide()" class="text-red-400 hover:text-red-300 text-sm font-bold border border-red-900 px-3 py-1 rounded bg-red-900/20 hover:bg-red-900/40">
+                            <i class="fas fa-trash-alt mr-2"></i> Excluir
+                        </button>
+                    </div>
 
-  document.getElementById("schoolName").value = DATA.schoolName || "";
-  document.getElementById("tickerText").value = DATA.tickerText || "";
-  document.getElementById("primaryColor").value = DATA.primaryColor || "#000000";
-  document.getElementById("accentColor").value = DATA.accentColor || "#ffffff";
-  document.getElementById("zoom").value = Number(DATA.zoom || 1);
-  document.getElementById("separatorSpacing").value = Number(DATA.separatorSpacing || 2);
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-xl space-y-6">
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Mídia</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="border-2 border-dashed border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-gray-700/50 transition cursor-pointer relative group h-48">
+                                    <input type="file" id="file-upload" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleFile(this)">
+                                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-500 mb-2 group-hover:text-blue-400 transition"></i>
+                                    <span class="text-sm font-medium text-gray-300">Carregar do PC</span>
+                                    <span class="text-[10px] text-gray-500 mt-1">Imagens (JPG/PNG) ou MP4</span>
+                                </div>
+                                <div class="bg-black rounded-lg border border-gray-700 flex items-center justify-center overflow-hidden h-48" id="media-preview">
+                                    <span class="text-xs text-gray-500">Pré-visualização</span>
+                                </div>
+                            </div>
+                            <div class="mt-3 bg-gray-700/50 p-2 rounded flex items-center gap-2">
+                                <i class="fas fa-link text-gray-500"></i>
+                                <input type="text" id="edit-url" class="bg-transparent border-none text-xs text-white w-full focus:ring-0 outline-none" placeholder="Ou cole URL externa (YouTube / Facebook)" onchange="updatePreview(this.value)">
+                            </div>
+                        </div>
 
-  renderSlides();
-}
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Categoria</label>
+                                <input type="text" id="edit-category" class="input-dark">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Layout</label>
+                                <select id="edit-layout" class="input-dark">
+                                    <option value="default">Padrão (Texto + Mídia)</option>
+                                    <option value="fullscreen">Tela Cheia (Só Mídia)</option>
+                                </select>
+                            </div>
+                        </div>
 
-function renderSlides() {
-  const container = document.getElementById("slides");
-  container.innerHTML = "";
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Título</label>
+                            <input type="text" id="edit-title" class="input-dark text-lg font-bold">
+                        </div>
 
-  DATA.slides.forEach((s, i) => {
-    const div = document.createElement("div");
-    div.className = "slide-item";
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Mensagem</label>
+                            <textarea id="edit-message" class="input-dark h-24 resize-none"></textarea>
+                        </div>
 
-    div.innerHTML = `
-      <label>Título
-        <input value="${s.title || ""}" onchange="DATA.slides[${i}].title=this.value">
-      </label>
-      <label>Mensagem
-        <textarea onchange="DATA.slides[${i}].message=this.value">${s.message || ""}</textarea>
-      </label>
-      <label>Categoria
-        <input value="${s.category || ""}" onchange="DATA.slides[${i}].category=this.value">
-      </label>
-      <label>Tipo de Mídia
-        <select onchange="DATA.slides[${i}].mediaType=this.value">
-          <option value="image" ${s.mediaType==="image"?"selected":""}>Imagem</option>
-          <option value="video" ${s.mediaType==="video"?"selected":""}>Vídeo</option>
-          <option value="iframe" ${s.mediaType==="iframe"?"selected":""}>Iframe</option>
-        </select>
-      </label>
-      <label>URL da Mídia
-        <input value="${s.url || ""}" onchange="DATA.slides[${i}].url=this.value">
-      </label>
-      <label>Duração (segundos)
-        <input type="number" value="${s.duration || 10}" onchange="DATA.slides[${i}].duration=Number(this.value)">
-      </label>
-      <button class="danger" onclick="removeSlide(${i})">Excluir</button>
-    `;
+                        <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-600">
+                            <h4 class="text-xs font-bold text-yellow-500 uppercase mb-3 flex items-center">
+                                <i class="far fa-clock mr-2"></i> Agendamento & Tempo
+                            </h4>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-[10px] text-gray-400 mb-1">Início</label>
+                                    <input type="datetime-local" id="edit-startDate" class="input-dark text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-400 mb-1">Término</label>
+                                    <input type="datetime-local" id="edit-endDate" class="input-dark text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-400 mb-1">Duração (seg)</label>
+                                    <input type="number" id="edit-duration" class="input-dark text-xs" value="10">
+                                </div>
+                            </div>
+                        </div>
 
-    container.appendChild(div);
-  });
-}
+                        <div class="pt-2">
+                            <button onclick="saveSlideLocal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg shadow-lg transition flex items-center justify-center gap-2 text-lg">
+                                <i class="fas fa-save"></i> CONFIRMAR MUDANÇAS
+                            </button>
+                            <p class="text-center text-[10px] text-gray-500 mt-2">
+                                <i class="fas fa-info-circle"></i> Depois clique em <strong>PUBLICAR NA TV</strong> no topo da página.
+                            </p>
+                        </div>
 
-function addSlide() {
-  DATA.slides.push({
-    id: Date.now(),
-    category: "",
-    title: "",
-    message: "",
-    layout: "default",
-    mediaType: "image",
-    url: "",
-    duration: 10,
-    startDate: null,
-    endDate: null
-  });
-  renderSlides();
-}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 
-function removeSlide(i) {
-  DATA.slides.splice(i, 1);
-  renderSlides();
-}
+    <script>
+        let GH_CONFIG = { user: '', repo: '', token: '' };
+        let DATA = { 
+            primaryColor: "#b91c1c", accentColor: "#facc15", zoom: "1.0",
+            separatorColor: "#000000", separatorSpacing: "2",
+            schoolName: "Orlando Laviero Ferraiuolo",
+            tickerText: "Bem-vindo ao SENAI",
+            slides: [] 
+        };
+        let currentSlideId = null;
+        let fileSHA = null;
 
-async function publish() {
-  DATA.schoolName = document.getElementById("schoolName").value;
-  DATA.tickerText = document.getElementById("tickerText").value;
-  DATA.primaryColor = document.getElementById("primaryColor").value;
-  DATA.accentColor = document.getElementById("accentColor").value;
-  DATA.zoom = Number(document.getElementById("zoom").value);
-  DATA.separatorSpacing = Number(document.getElementById("separatorSpacing").value);
+        window.onload = () => {
+            const stored = localStorage.getItem('gh_config');
+            if (stored) {
+                GH_CONFIG = JSON.parse(stored);
+                document.getElementById('gh-user').value = GH_CONFIG.user;
+                document.getElementById('gh-repo').value = GH_CONFIG.repo;
+                document.getElementById('gh-token').value = GH_CONFIG.token;
+                
+                document.getElementById('auth-modal').classList.add('hidden');
+                document.getElementById('main-interface').classList.remove('hidden');
+                
+                setupListeners();
+                loadDataFromGit();
+            }
+        };
 
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
+        function setupListeners() {
+            ['conf-primary', 'conf-accent'].forEach(id => {
+                const el = document.getElementById(id);
+                const txt = document.getElementById(id + '-text');
+                el.addEventListener('input', () => txt.value = el.value);
+                txt.value = el.value;
+            });
+            document.getElementById('conf-zoom').addEventListener('input', (e) => {
+                document.getElementById('zoom-val').innerText = Math.round(e.target.value * 100) + '%';
+            });
+            const spacingRange = document.getElementById('conf-sep-spacing-range');
+            const spacingVal = document.getElementById('spacing-val');
+            spacingRange.addEventListener('input', (e) => {
+                spacingVal.innerText = e.target.value + 'rem';
+                document.getElementById('conf-sep-spacing').value = e.target.value;
+            });
+        }
 
-  await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.path}`, {
-    method: "PUT",
-    headers: {
-      "Authorization": "token " + GITHUB.token,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: "Atualização do painel",
-      content,
-      sha: FILE_SHA
-    })
-  });
+        function saveAuth() {
+            const user = document.getElementById('gh-user').value.trim();
+            const repo = document.getElementById('gh-repo').value.trim();
+            let token = document.getElementById('gh-token').value.trim();
+            
+            token = token.replace(/[\u200B-\u200D\uFEFF]/g, '');
 
-  alert("Publicado com sucesso!");
-}
+            if(!user || !repo || !token) return Swal.fire('Erro', 'Preencha todos os campos', 'warning');
+            
+            GH_CONFIG = { user, repo, token };
+            localStorage.setItem('gh_config', JSON.stringify(GH_CONFIG));
+            location.reload();
+        }
 
-loadData();
-</script>
+        function logout() {
+            if(confirm('Desconectar?')) {
+                localStorage.removeItem('gh_config');
+                location.reload();
+            }
+        }
 
+        async function loadDataFromGit() {
+            const url = `https://api.github.com/repos/${GH_CONFIG.user}/${GH_CONFIG.repo}/contents/data.json?t=${Date.now()}`;
+            Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
+            
+            try {
+                const res = await fetch(url, {
+                    headers: { 
+                        'Authorization': `token ${GH_CONFIG.token}`, 
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                if (res.status === 404) {
+                    Swal.fire('Info', 'Arquivo data.json não encontrado no GitHub. Um novo será criado ao salvar.', 'info');
+                    fileSHA = null;
+                    populateUI(); renderSlidesList(); return;
+                }
+
+                if (!res.ok) {
+                    if(res.status === 401) throw new Error("Token inválido ou expirado.");
+                    throw new Error(`Erro GitHub: ${res.status}`);
+                }
+                
+                const json = await res.json();
+                fileSHA = json.sha; 
+                
+                const content = new TextDecoder().decode(Uint8Array.from(atob(json.content), c => c.charCodeAt(0)));
+                const loadedData = JSON.parse(content);
+                
+                DATA = { ...DATA, ...loadedData };
+                populateUI(); renderSlidesList(); Swal.close();
+
+            } catch (e) {
+                console.error(e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Falha na Conexão',
+                    text: 'Não foi possível carregar os dados. Verifique se o Token está correto e se o arquivo data.json existe no repositório.',
+                    footer: `<small>${e.message}</small>`
+                });
+            }
+        }
+
+        async function publishToGit() {
+            DATA.primaryColor = document.getElementById('conf-primary').value;
+            DATA.accentColor = document.getElementById('conf-accent').value;
+            DATA.zoom = document.getElementById('conf-zoom').value;
+            DATA.separatorColor = document.getElementById('conf-sep-color').value;
+            DATA.separatorSpacing = document.getElementById('conf-sep-spacing-range').value;
+            DATA.tickerText = document.getElementById('conf-ticker').value;
+            DATA.schoolName = document.getElementById('conf-school').value;
+
+            const url = `https://api.github.com/repos/${GH_CONFIG.user}/${GH_CONFIG.repo}/contents/data.json`;
+            const contentString = JSON.stringify(DATA, null, 4);
+            const contentBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(contentString)));
+
+            Swal.fire({title: 'Publicando...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            try {
+                const body = {
+                    message: "Update via Admin Panel " + new Date().toLocaleTimeString(),
+                    content: contentBase64
+                };
+                if (fileSHA) body.sha = fileSHA;
+
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GH_CONFIG.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) throw new Error(`Erro GitHub: ${res.status}`);
+                
+                const json = await res.json();
+                fileSHA = json.content.sha; 
+                Swal.fire('Sucesso!', 'A TV atualizará em ~1 min.', 'success');
+
+            } catch (e) {
+                Swal.fire('Erro ao Publicar', e.message, 'error');
+            }
+        }
+
+        function populateUI() {
+            document.getElementById('conf-primary').value = DATA.primaryColor;
+            document.getElementById('conf-primary-text').value = DATA.primaryColor;
+            document.getElementById('conf-accent').value = DATA.accentColor;
+            document.getElementById('conf-accent-text').value = DATA.accentColor;
+            document.getElementById('conf-zoom').value = DATA.zoom;
+            document.getElementById('zoom-val').innerText = Math.round(DATA.zoom * 100) + '%';
+            document.getElementById('conf-sep-color').value = DATA.separatorColor;
+            document.getElementById('conf-sep-spacing-range').value = DATA.separatorSpacing;
+            document.getElementById('spacing-val').innerText = DATA.separatorSpacing + 'rem';
+            document.getElementById('conf-ticker').value = DATA.tickerText;
+            document.getElementById('conf-school').value = DATA.schoolName;
+        }
+
+        function renderSlidesList() {
+            const list = document.getElementById('slides-list');
+            list.innerHTML = '';
+            const now = new Date();
+
+            DATA.slides.forEach(s => {
+                const div = document.createElement('div');
+                const isActive = s.id === currentSlideId;
+                let statusColor = "bg-green-500";
+                const start = s.startDate ? new Date(s.startDate) : null;
+                const end = s.endDate ? new Date(s.endDate) : null;
+                
+                if (start && !isNaN(start.getTime()) && now < start) statusColor = "bg-yellow-500";
+                else if (end && !isNaN(end.getTime()) && now > end) statusColor = "bg-red-500";
+
+                div.className = `slide-card p-3 rounded cursor-pointer border border-transparent hover:bg-gray-800 transition flex items-center gap-3 ${isActive ? 'active' : 'bg-gray-800/50'}`;
+                div.onclick = () => loadSlide(s.id);
+                
+                let icon = '<i class="fas fa-image text-gray-500"></i>';
+                if(s.mediaType === 'video') icon = '<i class="fas fa-video text-blue-400"></i>';
+                if(s.mediaType === 'iframe') icon = '<i class="fas fa-globe text-purple-400"></i>';
+
+                div.innerHTML = `<div class="w-2 h-2 rounded-full ${statusColor} shrink-0"></div><div class="w-8 h-8 bg-black rounded flex items-center justify-center shrink-0">${icon}</div><div class="overflow-hidden w-full"><div class="font-bold text-sm truncate text-white">${s.title || 'Sem Título'}</div><div class="text-[10px] text-gray-400 flex justify-between"><span>${s.category}</span></div></div>`;
+                list.appendChild(div);
+            });
+        }
+
+        function addNewSlide() {
+            const id = Date.now();
+            DATA.slides.push({ id, category: 'Aviso', title: 'Novo Slide', message: '', layout: 'default', mediaType: 'image', url: '', duration: 10, startDate: '', endDate: '' });
+            loadSlide(id); renderSlidesList();
+        }
+
+        function loadSlide(id) {
+            currentSlideId = id;
+            const s = DATA.slides.find(x => x.id === id);
+            if (!s) return;
+            document.getElementById('no-selection').classList.add('hidden');
+            document.getElementById('editor-form').classList.remove('hidden');
+            document.getElementById('edit-title').value = s.title;
+            document.getElementById('edit-category').value = s.category;
+            document.getElementById('edit-message').value = s.message;
+            document.getElementById('edit-layout').value = s.layout;
+            document.getElementById('edit-duration').value = s.duration;
+            document.getElementById('edit-startDate').value = s.startDate;
+            document.getElementById('edit-endDate').value = s.endDate;
+            const urlField = document.getElementById('edit-url');
+            if(s.url && s.url.startsWith('data:')) urlField.value = ''; else urlField.value = s.url;
+            updatePreview(s.url);
+            renderSlidesList();
+        }
+
+        function saveSlideLocal() {
+            const s = DATA.slides.find(x => x.id === currentSlideId);
+            if (!s) return;
+            const start = document.getElementById('edit-startDate').value;
+            const end = document.getElementById('edit-endDate').value;
+            if(start && end && new Date(end) <= new Date(start)) return Swal.fire('Data Inválida', 'Término deve ser DEPOIS do início.', 'warning');
+            s.title = document.getElementById('edit-title').value;
+            s.category = document.getElementById('edit-category').value;
+            s.message = document.getElementById('edit-message').value;
+            s.layout = document.getElementById('edit-layout').value;
+            s.duration = parseInt(document.getElementById('edit-duration').value);
+            s.startDate = start; s.endDate = end;
+            const urlInput = document.getElementById('edit-url').value.trim();
+            if(urlInput) {
+                s.url = urlInput;
+                if(urlInput.includes('youtube') || urlInput.includes('facebook')) s.mediaType = 'iframe';
+                else if(urlInput.match(/\.(mp4|webm)$/)) s.mediaType = 'video';
+                else s.mediaType = 'image';
+                if(s.url.includes('watch?v=')) { const vid = s.url.split('v=')[1].split('&')[0]; s.url = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}`; }
+            }
+            Swal.fire({ icon: 'success', title: 'Editado', text: 'Clique em PUBLICAR para salvar.', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
+            renderSlidesList();
+        }
+
+        function deleteSlide() {
+            Swal.fire({ title: 'Excluir?', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim' }).then((r) => {
+                if (r.isConfirmed) {
+                    DATA.slides = DATA.slides.filter(x => x.id !== currentSlideId);
+                    currentSlideId = null;
+                    document.getElementById('editor-form').classList.add('hidden');
+                    document.getElementById('no-selection').classList.remove('hidden');
+                    renderSlidesList();
+                }
+            });
+        }
+
+        function handleFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 2.5 * 1024 * 1024) { Swal.fire('Arquivo Grande', 'Máximo 2.5MB. Para vídeos maiores, use YouTube.', 'warning'); input.value = ''; return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                const s = DATA.slides.find(x => x.id === currentSlideId);
+                if(s) {
+                    s.url = e.target.result;
+                    s.mediaType = file.type.startsWith('video') ? 'video' : 'image';
+                    document.getElementById('edit-url').value = '';
+                    updatePreview(s.url);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updatePreview(url) {
+            const div = document.getElementById('media-preview');
+            if (!url) { div.innerHTML = '<span class="text-xs text-gray-500">Sem Mídia</span>'; return; }
+            let html = '';
+            if (url.includes('<iframe') || url.includes('youtube') || url.includes('facebook')) { html = '<div class="text-center text-purple-400"><i class="fas fa-globe text-3xl mb-1"></i><br>Link Externo</div>'; } 
+            else if (url.startsWith('data:video') || url.match(/\.(mp4|webm)$/)) { html = '<video src="'+url+'" class="h-full w-full object-contain" controls></video>'; } 
+            else { html = `<img src="${url}" class="h-full w-full object-contain">`; }
+            div.innerHTML = html;
+        }
+    </script>
 </body>
 </html>
