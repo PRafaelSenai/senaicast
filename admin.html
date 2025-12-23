@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Painel SENAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+
+    <!-- Login / Configuração -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 p-8 rounded-xl max-w-md w-full border border-gray-700 shadow-2xl">
+            <h2 class="text-2xl font-bold mb-6 text-yellow-500 text-center"><i class="fas fa-lock mr-2"></i>Acesso Administrativo</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Usuário GitHub</label>
+                    <input type="text" id="gh-user" value="PRafaelSenai" class="w-full bg-gray-700 border border-gray-600 rounded p-2 focus:border-yellow-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Nome do Repositório</label>
+                    <input type="text" id="gh-repo" value="senaicast" class="w-full bg-gray-700 border border-gray-600 rounded p-2 focus:border-yellow-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Token de Acesso (PAT)</label>
+                    <input type="password" id="gh-token" class="w-full bg-gray-700 border border-gray-600 rounded p-2 focus:border-yellow-500 outline-none" placeholder="Cole seu token ghp_... aqui">
+                    <p class="text-xs text-red-400 mt-1 font-bold">
+                        <i class="fas fa-exclamation-triangle"></i> NÃO use sua senha do Gmail/GitHub!
+                    </p>
+                    <a href="https://github.com/settings/tokens/new?scopes=repo&description=PainelTV" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 underline block mt-1">
+                        Clique aqui para criar o Token (Marque a opção 'repo')
+                    </a>
+                </div>
+                <button onclick="saveAuth()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded mt-4 transition">CONECTAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interface Principal -->
+    <div id="main-interface" class="hidden min-h-screen flex flex-col">
+        <!-- Topo -->
+        <header class="bg-gray-800 border-b border-gray-700 p-4 flex justify-between items-center sticky top-0 z-40">
+            <h1 class="text-xl font-bold flex items-center">
+                <i class="fas fa-tv text-yellow-500 mr-2"></i> Gerenciador de Painel
+            </h1>
+            <div class="flex gap-3">
+                <button onclick="loadDataFromGit()" class="text-gray-400 hover:text-white px-3 py-1 text-sm"><i class="fas fa-sync mr-1"></i> Recarregar</button>
+                <button onclick="publishToGit()" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded font-bold shadow-lg flex items-center">
+                    <i class="fas fa-cloud-upload-alt mr-2"></i> PUBLICAR NA TV
+                </button>
+                <button onclick="logout()" class="bg-red-900 hover:bg-red-800 px-3 py-2 rounded text-sm"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar Lista -->
+            <aside class="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+                <div class="p-4 border-b border-gray-700">
+                    <button onclick="addNewSlide()" class="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded font-bold text-sm">+ Novo Slide</button>
+                </div>
+                <div id="slides-list" class="flex-1 overflow-y-auto p-2 space-y-2">
+                    <!-- Slides aqui -->
+                </div>
+            </aside>
+
+            <!-- Área de Edição -->
+            <main class="flex-1 p-6 overflow-y-auto bg-gray-900" id="editor-area">
+                <div id="no-selection" class="h-full flex flex-col items-center justify-center text-gray-500">
+                    <i class="fas fa-mouse-pointer text-4xl mb-4"></i>
+                    <p>Selecione um slide ao lado para editar</p>
+                </div>
+
+                <div id="editor-form" class="hidden max-w-4xl mx-auto bg-gray-800 p-6 rounded-lg border border-gray-700">
+                    <!-- Configurações do Slide -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Mídia (Imagem/Vídeo)</label>
+                            <div class="border-2 border-dashed border-gray-600 rounded p-4 text-center cursor-pointer hover:bg-gray-700 relative group">
+                                <input type="file" id="file-upload" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleFile(this)">
+                                <div id="media-preview" class="h-32 flex items-center justify-center text-gray-500">
+                                    <span>Clique para upload ou arraste</span>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <input type="text" id="edit-url" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs" placeholder="Ou cole URL (Youtube/Facebook)" onchange="updatePreview(this.value)">
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm text-gray-400">Título</label>
+                                <input type="text" id="edit-title" class="w-full bg-gray-700 border-gray-600 rounded p-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400">Categoria</label>
+                                <input type="text" id="edit-category" class="w-full bg-gray-700 border-gray-600 rounded p-2">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm text-gray-400">Layout</label>
+                                    <select id="edit-layout" class="w-full bg-gray-700 border-gray-600 rounded p-2">
+                                        <option value="default">Padrão</option>
+                                        <option value="fullscreen">Tela Cheia</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400">Duração (s)</label>
+                                    <input type="number" id="edit-duration" class="w-full bg-gray-700 border-gray-600 rounded p-2">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm text-gray-400">Mensagem</label>
+                        <textarea id="edit-message" class="w-full h-24 bg-gray-700 border-gray-600 rounded p-2"></textarea>
+                    </div>
+
+                    <div class="bg-gray-700/50 p-4 rounded border border-gray-600 mb-6">
+                        <h3 class="text-sm font-bold text-yellow-500 mb-3">Agendamento</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-400">Início</label>
+                                <input type="datetime-local" id="edit-startDate" class="w-full bg-gray-700 border-gray-600 rounded p-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400">Término</label>
+                                <input type="datetime-local" id="edit-endDate" class="w-full bg-gray-700 border-gray-600 rounded p-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between pt-4 border-t border-gray-700">
+                        <button onclick="deleteSlide()" class="text-red-400 hover:text-red-300 font-bold text-sm">Excluir Slide</button>
+                        <button onclick="saveSlideLocal()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded font-bold">Confirmar Edição</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let GH_CONFIG = { user: '', repo: '', token: '' };
+        let DATA = { slides: [] };
+        let currentSlideId = null;
+        let fileSHA = null; // Necessário para update no GitHub
+
+        // --- AUTH & INIT ---
+        window.onload = () => {
+            const stored = localStorage.getItem('gh_config');
+            if (stored) {
+                GH_CONFIG = JSON.parse(stored);
+                document.getElementById('auth-modal').classList.add('hidden');
+                document.getElementById('main-interface').classList.remove('hidden');
+                loadDataFromGit();
+            }
+        };
+
+        function saveAuth() {
+            GH_CONFIG.user = document.getElementById('gh-user').value.trim();
+            GH_CONFIG.repo = document.getElementById('gh-repo').value.trim();
+            GH_CONFIG.token = document.getElementById('gh-token').value.trim();
+            
+            if(!GH_CONFIG.user || !GH_CONFIG.repo || !GH_CONFIG.token) return alert('Preencha tudo');
+            
+            localStorage.setItem('gh_config', JSON.stringify(GH_CONFIG));
+            location.reload();
+        }
+
+        function logout() {
+            if(confirm('Desconectar e limpar dados salvos?')) {
+                localStorage.removeItem('gh_config');
+                location.reload();
+            }
+        }
+
+        // --- GITHUB API ---
+        async function loadDataFromGit() {
+            const url = `https://api.github.com/repos/${GH_CONFIG.user}/${GH_CONFIG.repo}/contents/data.json`;
+            Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
+            
+            try {
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `token ${GH_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' }
+                });
+                
+                if (!res.ok) throw new Error('Erro ao conectar GitHub. Verifique token/repo.');
+                
+                const json = await res.json();
+                fileSHA = json.sha; // Guarda o SHA para poder atualizar depois
+                
+                // Decode Content (Base64 -> UTF8)
+                const content = new TextDecoder().decode(Uint8Array.from(atob(json.content), c => c.charCodeAt(0)));
+                DATA = JSON.parse(content);
+                
+                renderList();
+                Swal.close();
+            } catch (e) {
+                Swal.fire('Erro', e.message, 'error');
+                // Se o arquivo não existir, inicia vazio
+                if(e.message.includes('404')) {
+                    DATA = { slides: [] };
+                    renderList();
+                    Swal.close();
+                }
+            }
+        }
+
+        async function publishToGit() {
+            // Se não tiver SHA (primeiro save de arquivo novo), a API aceita sem SHA para create, 
+            // mas aqui assumimos update. Se der 404 no load, DATA inicia vazio e fileSHA null.
+            
+            const url = `https://api.github.com/repos/${GH_CONFIG.user}/${GH_CONFIG.repo}/contents/data.json`;
+            const contentString = JSON.stringify(DATA, null, 4);
+            // Encode UTF8 -> Base64
+            const contentBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(contentString)));
+
+            Swal.fire({title: 'Publicando...', text: 'Enviando dados para o GitHub', didOpen: () => Swal.showLoading()});
+
+            try {
+                const body = {
+                    message: "Update slides via Admin Panel",
+                    content: contentBase64
+                };
+                if (fileSHA) body.sha = fileSHA;
+
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GH_CONFIG.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) throw new Error('Falha ao salvar');
+                
+                const json = await res.json();
+                fileSHA = json.content.sha; // Atualiza SHA
+                Swal.fire('Sucesso!', 'TV será atualizada em ~1 min.', 'success');
+            } catch (e) {
+                Swal.fire('Erro', 'Falha ao publicar: ' + e.message, 'error');
+            }
+        }
+
+        // --- EDITOR LOGIC ---
+        function renderList() {
+            const list = document.getElementById('slides-list');
+            list.innerHTML = '';
+            DATA.slides.forEach(s => {
+                const div = document.createElement('div');
+                div.className = `p-3 rounded bg-gray-700 cursor-pointer hover:bg-gray-600 border border-transparent ${s.id === currentSlideId ? 'border-yellow-500' : ''}`;
+                div.onclick = () => loadSlide(s.id);
+                div.innerHTML = `<div class="font-bold text-sm truncate">${s.title || 'Sem título'}</div><div class="text-xs text-gray-400">${s.category}</div>`;
+                list.appendChild(div);
+            });
+        }
+
+        function addNewSlide() {
+            const id = Date.now();
+            DATA.slides.push({
+                id, category: 'Aviso', title: 'Novo Slide', message: '', layout: 'default',
+                mediaType: 'image', url: '', duration: 10, startDate: '', endDate: ''
+            });
+            loadSlide(id);
+            renderList();
+        }
+
+        function loadSlide(id) {
+            currentSlideId = id;
+            const s = DATA.slides.find(x => x.id === id);
+            if (!s) return;
+
+            document.getElementById('no-selection').classList.add('hidden');
+            document.getElementById('editor-form').classList.remove('hidden');
+
+            document.getElementById('edit-title').value = s.title;
+            document.getElementById('edit-category').value = s.category;
+            document.getElementById('edit-message').value = s.message;
+            document.getElementById('edit-layout').value = s.layout;
+            document.getElementById('edit-duration').value = s.duration;
+            document.getElementById('edit-url').value = s.url.startsWith('data:') ? '' : s.url;
+            document.getElementById('edit-startDate').value = s.startDate;
+            document.getElementById('edit-endDate').value = s.endDate;
+            
+            updatePreview(s.url);
+            renderList();
+        }
+
+        function saveSlideLocal() {
+            const s = DATA.slides.find(x => x.id === currentSlideId);
+            if (!s) return;
+
+            // Validação de datas
+            const start = document.getElementById('edit-startDate').value;
+            const end = document.getElementById('edit-endDate').value;
+            if(start && end && new Date(end) <= new Date(start)) {
+                return Swal.fire('Erro na Data', 'O término deve ser DEPOIS do início.', 'warning');
+            }
+
+            s.title = document.getElementById('edit-title').value;
+            s.category = document.getElementById('edit-category').value;
+            s.message = document.getElementById('edit-message').value;
+            s.layout = document.getElementById('edit-layout').value;
+            s.duration = parseInt(document.getElementById('edit-duration').value);
+            s.startDate = start;
+            s.endDate = end;
+            
+            // URL handling (se não for upload)
+            const urlInput = document.getElementById('edit-url').value;
+            if(urlInput && !urlInput.startsWith('data:')) {
+                s.url = urlInput;
+                if(urlInput.includes('youtube') || urlInput.includes('facebook')) s.mediaType = 'iframe';
+                else if(urlInput.match(/\.(mp4|webm)$/)) s.mediaType = 'video';
+                else s.mediaType = 'image';
+                
+                // Embed Fix
+                if(s.url.includes('watch?v=')) s.url = `https://www.youtube.com/embed/${s.url.split('v=')[1].split('&')[0]}?autoplay=1&mute=1`;
+            }
+
+            Swal.fire({
+                title: 'Salvo Localmente',
+                text: 'Não esqueça de clicar em "PUBLICAR NA TV" para enviar para a tela.',
+                icon: 'info',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            renderList();
+        }
+
+        function deleteSlide() {
+            if(confirm('Tem certeza?')) {
+                DATA.slides = DATA.slides.filter(x => x.id !== currentSlideId);
+                currentSlideId = null;
+                document.getElementById('editor-form').classList.add('hidden');
+                document.getElementById('no-selection').classList.remove('hidden');
+                renderList();
+            }
+        }
+
+        function handleFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            if (file.size > 2 * 1024 * 1024) { // 2MB Limit Warning
+                Swal.fire('Arquivo Grande', 'Recomendamos usar links externos para vídeos ou imagens pesadas para não travar o GitHub.', 'warning');
+            }
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                const s = DATA.slides.find(x => x.id === currentSlideId);
+                if(s) {
+                    s.url = e.target.result;
+                    s.mediaType = file.type.startsWith('video') ? 'video' : 'image';
+                    document.getElementById('edit-url').value = '';
+                    updatePreview(s.url);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updatePreview(url) {
+            const div = document.getElementById('media-preview');
+            if (!url) { div.innerHTML = '<span>Sem Mídia</span>'; return; }
+            
+            let html = '';
+            if (url.includes('<iframe') || url.includes('youtube') || url.includes('facebook')) {
+                html = '<i class="fas fa-globe text-3xl"></i><span class="ml-2">Link Externo</span>';
+            } else if (url.startsWith('data:video') || url.match(/\.(mp4|webm)$/)) {
+                html = '<i class="fas fa-video text-3xl"></i><span class="ml-2">Vídeo</span>';
+            } else {
+                html = `<img src="${url}" class="h-full object-contain">`;
+            }
+            div.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
