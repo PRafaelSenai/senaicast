@@ -20,7 +20,7 @@
             --ticker-color: #FFFFFF;
             --ticker-duration: 30s;
             --separator-color: #ffffff; 
-            --separator-spacing: 0.5rem; /* Padrão mais próximo */
+            --separator-spacing: 0.5rem; 
             --separator-size: 1.5rem;
         }
 
@@ -61,7 +61,6 @@
         .ticker-track { overflow: hidden; display: flex; align-items: center; position: relative; }
         .ticker-content { display: inline-block; padding-left: 100%; animation: ticker var(--ticker-duration) linear infinite; }
         
-        /* CORREÇÃO DO SEPARADOR */
         .ticker-separator { 
             color: var(--separator-color) !important; 
             margin: 0 var(--separator-spacing); 
@@ -96,7 +95,10 @@
         <div class="content-area" id="main-layout">
             <div class="sidebar">
                 <div class="mb-4">
-                    <span id="slide-category" class="inline-block px-3 py-1 rounded bg-white text-[#E30613] font-bold text-sm uppercase mb-3 shadow-lg">...</span>
+                    <span id="slide-badge" class="inline-block px-3 py-1 rounded bg-white text-[#E30613] font-bold text-sm uppercase mb-3 shadow-lg flex items-center w-max gap-2">
+                        <i id="slide-icon" class="fas fa-info-circle"></i>
+                        <span id="slide-category">...</span>
+                    </span>
                     <h2 id="slide-title" class="text-5xl font-bold leading-tight mb-4">...</h2>
                 </div>
                 <div id="slide-message" class="text-xl leading-relaxed border-l-4 border-white pl-4 opacity-90">...</div>
@@ -113,24 +115,19 @@
     </div>
 
     <script>
-        // --- 🔴 CONFIGURAÇÃO DO SUPABASE (COLE SUAS CHAVES AQUI TAMBÉM) 🔴 ---
         const SUPABASE_URL = "https://pmnmudyseicnroypcmcp.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_WCG4H3nty0gT0LevuIoPFw_ro40Huqh"; 
-        // ---------------------------------------------------------------------
 
         let supabaseClient;
         let SYSTEM_CONFIG = {};
         let currentSlideIndex = 0;
         let slideTimer = null;
 
-        window.onload = () => {
-            initSupabase();
-        };
+        window.onload = () => { initSupabase(); };
 
         function initSupabase() {
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                
                 supabaseClient.channel('public:app_config')
                     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_config', filter: 'id=eq.1' }, payload => {
                         if (payload.new && payload.new.data) {
@@ -140,11 +137,8 @@
                         }
                     })
                     .subscribe();
-
                 loadData();
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         async function loadData() {
@@ -152,11 +146,9 @@
             if (data && data.data) {
                 SYSTEM_CONFIG = data.data;
                 applyGlobalSettings();
-                
                 const loader = document.getElementById('loading-overlay');
                 if(loader) { loader.style.opacity = '0'; setTimeout(()=>loader.remove(),500); }
                 document.getElementById('tv-container').classList.remove('opacity-0');
-                
                 initTV();
             }
         }
@@ -167,9 +159,7 @@
             root.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor || '#0047B6');
             root.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom || "1.0");
             
-            // Ticker Configs
             root.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor || '#ffffff');
-            // IMPORTANTE: Default de 0.5rem se não vier nada
             root.style.setProperty('--separator-spacing', (SYSTEM_CONFIG.separatorSpacing || 0.5) + 'rem');
             root.style.setProperty('--separator-size', (SYSTEM_CONFIG.separatorSize || 1.5) + 'rem');
             
@@ -179,7 +169,6 @@
             
             document.getElementById('display-school-name').innerText = SYSTEM_CONFIG.schoolName || "SENAI";
             
-            // Separador (Bolinha) com classe específica
             const sepHtml = `<span class="ticker-separator">•</span>`;
             document.getElementById('display-ticker').innerHTML = (SYSTEM_CONFIG.tickerText || "").replace(/\|/g, sepHtml);
         }
@@ -217,6 +206,10 @@
 
         function renderSlide(slide) {
             document.getElementById('slide-category').innerText = slide.category || '';
+            // Atualiza Ícone da Categoria
+            const iconClass = slide.categoryIcon || 'fas fa-info-circle';
+            document.getElementById('slide-icon').className = iconClass;
+            
             document.getElementById('slide-title').innerText = slide.title || '';
             document.getElementById('slide-message').innerText = slide.message || '';
             
