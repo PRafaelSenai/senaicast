@@ -211,10 +211,10 @@
     </div>
 
     <script>
-        // --- SUAS CHAVES DO SUPABASE (JÁ CONFIGURADAS) ---
+        // --- 🔴 CONFIGURAÇÃO DO SUPABASE (JÁ CONFIGURADAS) 🔴 ---
         const SUPABASE_URL = "https://pmnmudyseicnroypcmcp.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_WCG4H3nty0gT0LevuIoPFw_ro40Huqh"; 
-        // --------------------------------------------------
+        // ---------------------------------------------------------------------
 
         let supabaseClient;
         let DATA = { slides: [], primaryColor: "#E30613", accentColor: "#0047B6" };
@@ -247,39 +247,13 @@
                         title: 'Configuração Necessária',
                         width: '600px',
                         html: `
-                            <p class="text-sm text-gray-300 mb-4 text-left">O banco de dados do Supabase ainda está vazio. Você precisa criar a estrutura inicial.</p>
+                            <p class="text-sm text-gray-300 mb-4 text-left">O banco de dados do Supabase ainda está vazio.</p>
                             <ol class="text-xs text-gray-400 text-left list-decimal ml-5 mb-4 space-y-2">
-                                <li>Acesse o <a href="https://supabase.com/dashboard/project/pmnmudyseicnroypcmcp/sql" target="_blank" class="text-blue-400 underline">SQL Editor do seu Projeto</a>.</li>
-                                <li>Clique em <b>"New Query"</b>.</li>
-                                <li>Copie o código abaixo, cole lá e clique em <b>RUN</b>.</li>
+                                <li>Acesse o SQL Editor do seu Projeto no Supabase.</li>
+                                <li>Rode o script de criação de tabelas (fornecido anteriormente).</li>
                             </ol>
-                            <textarea class="w-full h-48 bg-gray-900 text-green-400 text-xs p-3 rounded font-mono border border-gray-700" readonly onclick="this.select()">
--- 1. Cria a tabela de configuração
-create table if not exists app_config (
-  id bigint primary key generated always as identity,
-  data jsonb
-);
-
--- 2. Inicia com dados vazios
-insert into app_config (data) 
-values ('{"slides": [], "schoolName": "SENAI", "primaryColor": "#E30613"}');
-
--- 3. Libera acesso ao banco (Público)
-alter table app_config enable row level security;
-create policy "Acesso Total" on app_config for all using (true) with check (true);
-
--- 4. Cria o balde de arquivos
-insert into storage.buckets (id, name, public) 
-values ('senaicast-media', 'senaicast-media', true);
-
--- 5. Libera acesso aos arquivos
-create policy "Acesso Storage" on storage.objects for all 
-using (bucket_id = 'senaicast-media') 
-with check (bucket_id = 'senaicast-media');
-                            </textarea>
-                            <p class="text-xs text-gray-500 mt-2">Depois de rodar lá, recarregue esta página.</p>
                         `,
-                        confirmButtonText: 'Entendi, vou fazer agora',
+                        confirmButtonText: 'OK',
                         confirmButtonColor: '#E30613'
                     });
                     return;
@@ -294,7 +268,8 @@ with check (bucket_id = 'senaicast-media');
                     renderSlidesList();
                     Swal.close();
                 } else {
-                    saveToSupabase(true); // Salva inicial
+                    // Se não existe, tenta criar. Se falhar, é porque o SQL não foi rodado
+                    saveToSupabase(true); 
                     Swal.close();
                 }
             } catch (e) {
@@ -355,8 +330,24 @@ with check (bucket_id = 'senaicast-media');
             if(!silent) Swal.fire({title: 'Salvando...', didOpen: () => Swal.showLoading()});
 
             try {
-                const { error } = await supabaseClient.from('app_config').upsert({ id: 1, data: cleanData });
-                if (error) throw error;
+                // CORREÇÃO AQUI: Usa update em vez de upsert para evitar erro de ID
+                const { error } = await supabaseClient
+                    .from('app_config')
+                    .update({ data: cleanData })
+                    .eq('id', 1);
+
+                if (error) {
+                    // Se falhar (ex: linha não existe), tenta insert sem ID (ele gera sozinho)
+                    if(error.details && error.details.includes('0 rows')) {
+                         const { error: insertError } = await supabaseClient
+                            .from('app_config')
+                            .insert({ data: cleanData });
+                         if(insertError) throw insertError;
+                    } else {
+                        throw error;
+                    }
+                }
+                
                 if(!silent) Swal.fire('Sucesso!', 'TV Atualizada.', 'success');
             } catch (e) {
                 if(!silent) Swal.fire('Erro ao Salvar', e.message, 'error');
