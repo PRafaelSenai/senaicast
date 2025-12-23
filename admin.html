@@ -87,9 +87,9 @@
                             <input type="text" id="edit-url" 
                                 class="input-dark text-xs pl-8" 
                                 placeholder="Cole aqui link do Google Drive, YouTube ou Imagem da Web" 
-                                onchange="handleUrlInput(this.value)">
+                                oninput="handleUrlInput(this.value)">
                             <p class="text-[10px] text-gray-500 mt-1 ml-1">
-                                <i class="fab fa-google-drive mr-1"></i> Google Drive: Cole o link de compartilhamento "Qualquer pessoa com o link".
+                                <i class="fab fa-google-drive mr-1"></i> Google Drive: O arquivo deve estar como <strong>"Público"</strong>.
                             </p>
                         </div>
                     </div>
@@ -146,11 +146,10 @@
             if (!url) return "";
             
             // Google Drive Link Converter
-            // De: https://drive.google.com/file/d/12345/view...
-            // Para: https://drive.google.com/uc?export=view&id=12345
             const driveRegex = /\/file\/d\/([a-zA-Z0-9_-]+)/;
             const driveMatch = url.match(driveRegex);
             if (driveMatch && driveMatch[1]) {
+                // Link Direto para Imagem
                 return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
             }
 
@@ -168,7 +167,6 @@
 
         window.handleUrlInput = function(val) {
             const processed = processUrl(val);
-            // Se mudou, atualiza o campo para o usuário ver
             if (processed !== val) {
                 document.getElementById('edit-url').value = processed;
             }
@@ -321,12 +319,11 @@
             
             const urlInput = document.getElementById('edit-url').value.trim();
             if(urlInput) {
-                // Processa URL do Drive/Youtube antes de salvar
                 const processed = processUrl(urlInput);
                 s.url = processed;
                 
                 if(s.url.includes('youtube') || s.url.includes('drive.google.com')) s.mediaType = 'iframe';
-                else s.mediaType = 'image'; // Assume imagem para links genéricos
+                else s.mediaType = 'image';
             }
             
             Swal.fire({icon: 'success', title: 'Editado', text: 'Clique em SALVAR NA TV.', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
@@ -407,9 +404,9 @@
             
             // Drive ou Youtube = Iframe
             if (url.includes('drive.google.com') || url.includes('youtube') || url.includes('iframe')) {
-                // Se for Drive, tenta mostrar a imagem direto no preview se for convertida
+                // Tenta carregar imagem com aviso de erro
                 if (url.includes('drive.google.com') && url.includes('export=view')) {
-                     div.innerHTML = `<img src="${url}" class="h-full object-contain" onerror="this.src='https://via.placeholder.com/150?text=Erro+Drive'">`;
+                     div.innerHTML = `<img src="${url}" class="h-full object-contain" onerror="this.parentElement.innerHTML='<div class=\\'text-red-400 text-xs text-center p-2\\'><i class=\\'fas fa-lock text-xl mb-1\\'></i><br>Erro: Imagem Privada.<br>Libere no Drive.</div>'">`;
                 } else {
                      div.innerHTML = '<i class="fas fa-globe text-3xl"></i> Link Externo';
                 }
