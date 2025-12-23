@@ -28,13 +28,7 @@
 </head>
 <body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
 
-    <!-- AVISO DE PROTOCOLO (SE ABRIR LOCAL) -->
-    <div id="local-warning" class="hidden fixed top-0 left-0 w-full bg-red-600 text-white p-4 text-center font-bold z-[100]">
-        ⚠️ ERRO: Você abriu este arquivo no seu computador (file://).<br>
-        O Painel só funciona online! Acesse pelo link: <span id="online-link" class="underline"></span>
-    </div>
-
-    <!-- TELA DE LOGIN -->
+    <!-- LOGIN MODAL -->
     <div id="auth-modal" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 p-8 rounded-xl max-w-md w-full border border-gray-700 shadow-2xl">
             <div class="text-center mb-6">
@@ -263,17 +257,6 @@
     </div>
 
     <script>
-        // === DIAGNÓSTICO DE AMBIENTE ===
-        if (window.location.protocol === 'file:') {
-            document.getElementById('local-warning').classList.remove('hidden');
-            const user = "PRafaelSenai"; // Ajuste se necessário
-            const repo = "senaicast";
-            const link = `https://${user.toLowerCase()}.github.io/${repo}/admin.html`;
-            const linkEl = document.getElementById('online-link');
-            linkEl.innerText = link;
-            linkEl.innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
-        }
-
         let GH_CONFIG = { user: '', repo: '', token: '' };
         let DATA = { 
             primaryColor: "#b91c1c", accentColor: "#facc15", zoom: "1.0",
@@ -324,7 +307,6 @@
             const repo = document.getElementById('gh-repo').value.trim();
             let token = document.getElementById('gh-token').value.trim();
             
-            // Remove espaços invisíveis que podem vir no copy-paste
             token = token.replace(/[\u200B-\u200D\uFEFF]/g, '');
 
             if(!user || !repo || !token) return Swal.fire('Erro', 'Preencha todos os campos', 'warning');
@@ -342,9 +324,7 @@
         }
 
         async function loadDataFromGit() {
-            // Adiciona timestamp para evitar cache
             const url = `https://api.github.com/repos/${GH_CONFIG.user}/${GH_CONFIG.repo}/contents/data.json?t=${Date.now()}`;
-            
             Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
             
             try {
@@ -357,7 +337,7 @@
                 });
                 
                 if (res.status === 404) {
-                    Swal.fire('Info', 'Arquivo de dados não encontrado. Será criado ao salvar.', 'info');
+                    Swal.fire('Info', 'Arquivo data.json não encontrado no GitHub. Um novo será criado ao salvar.', 'info');
                     fileSHA = null;
                     populateUI(); renderSlidesList(); return;
                 }
@@ -370,28 +350,24 @@
                 const json = await res.json();
                 fileSHA = json.sha; 
                 
-                // Decodifica UTF-8 Corretamente
                 const content = new TextDecoder().decode(Uint8Array.from(atob(json.content), c => c.charCodeAt(0)));
                 const loadedData = JSON.parse(content);
                 
                 DATA = { ...DATA, ...loadedData };
-                
-                populateUI();
-                renderSlidesList();
-                Swal.close();
+                populateUI(); renderSlidesList(); Swal.close();
 
             } catch (e) {
                 console.error(e);
                 Swal.fire({
                     icon: 'error',
                     title: 'Falha na Conexão',
-                    text: e.message === 'Failed to fetch' ? 'Erro de Rede. Verifique sua internet ou se o Token está correto.' : e.message
+                    text: 'Não foi possível carregar os dados. Verifique se o Token está correto e se o arquivo data.json existe no repositório.',
+                    footer: `<small>${e.message}</small>`
                 });
             }
         }
 
         async function publishToGit() {
-            // Salva Configs
             DATA.primaryColor = document.getElementById('conf-primary').value;
             DATA.accentColor = document.getElementById('conf-accent').value;
             DATA.zoom = document.getElementById('conf-zoom').value;
@@ -400,7 +376,6 @@
             DATA.tickerText = document.getElementById('conf-ticker').value;
             DATA.schoolName = document.getElementById('conf-school').value;
 
-            // URL Limpa sem query params para o PUT
             const url = `https://api.github.com/repos/${GH_CONFIG.user}/${GH_CONFIG.repo}/contents/data.json`;
             const contentString = JSON.stringify(DATA, null, 4);
             const contentBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(contentString)));
@@ -427,7 +402,6 @@
                 
                 const json = await res.json();
                 fileSHA = json.content.sha; 
-                
                 Swal.fire('Sucesso!', 'A TV atualizará em ~1 min.', 'success');
 
             } catch (e) {
@@ -457,7 +431,6 @@
             DATA.slides.forEach(s => {
                 const div = document.createElement('div');
                 const isActive = s.id === currentSlideId;
-                
                 let statusColor = "bg-green-500";
                 const start = s.startDate ? new Date(s.startDate) : null;
                 const end = s.endDate ? new Date(s.endDate) : null;
@@ -472,16 +445,7 @@
                 if(s.mediaType === 'video') icon = '<i class="fas fa-video text-blue-400"></i>';
                 if(s.mediaType === 'iframe') icon = '<i class="fas fa-globe text-purple-400"></i>';
 
-                div.innerHTML = `
-                    <div class="w-2 h-2 rounded-full ${statusColor} shrink-0"></div>
-                    <div class="w-8 h-8 bg-black rounded flex items-center justify-center shrink-0">${icon}</div>
-                    <div class="overflow-hidden w-full">
-                        <div class="font-bold text-sm truncate text-white">${s.title || 'Sem Título'}</div>
-                        <div class="text-[10px] text-gray-400 flex justify-between">
-                            <span>${s.category}</span>
-                        </div>
-                    </div>
-                `;
+                div.innerHTML = `<div class="w-2 h-2 rounded-full ${statusColor} shrink-0"></div><div class="w-8 h-8 bg-black rounded flex items-center justify-center shrink-0">${icon}</div><div class="overflow-hidden w-full"><div class="font-bold text-sm truncate text-white">${s.title || 'Sem Título'}</div><div class="text-[10px] text-gray-400 flex justify-between"><span>${s.category}</span></div></div>`;
                 list.appendChild(div);
             });
         }
@@ -496,10 +460,8 @@
             currentSlideId = id;
             const s = DATA.slides.find(x => x.id === id);
             if (!s) return;
-
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-form').classList.remove('hidden');
-
             document.getElementById('edit-title').value = s.title;
             document.getElementById('edit-category').value = s.category;
             document.getElementById('edit-message').value = s.message;
@@ -507,11 +469,8 @@
             document.getElementById('edit-duration').value = s.duration;
             document.getElementById('edit-startDate').value = s.startDate;
             document.getElementById('edit-endDate').value = s.endDate;
-            
             const urlField = document.getElementById('edit-url');
-            if(s.url && s.url.startsWith('data:')) urlField.value = '';
-            else urlField.value = s.url;
-            
+            if(s.url && s.url.startsWith('data:')) urlField.value = ''; else urlField.value = s.url;
             updatePreview(s.url);
             renderSlidesList();
         }
@@ -519,31 +478,23 @@
         function saveSlideLocal() {
             const s = DATA.slides.find(x => x.id === currentSlideId);
             if (!s) return;
-
             const start = document.getElementById('edit-startDate').value;
             const end = document.getElementById('edit-endDate').value;
             if(start && end && new Date(end) <= new Date(start)) return Swal.fire('Data Inválida', 'Término deve ser DEPOIS do início.', 'warning');
-
             s.title = document.getElementById('edit-title').value;
             s.category = document.getElementById('edit-category').value;
             s.message = document.getElementById('edit-message').value;
             s.layout = document.getElementById('edit-layout').value;
             s.duration = parseInt(document.getElementById('edit-duration').value);
             s.startDate = start; s.endDate = end;
-            
             const urlInput = document.getElementById('edit-url').value.trim();
             if(urlInput) {
                 s.url = urlInput;
                 if(urlInput.includes('youtube') || urlInput.includes('facebook')) s.mediaType = 'iframe';
                 else if(urlInput.match(/\.(mp4|webm)$/)) s.mediaType = 'video';
                 else s.mediaType = 'image';
-                
-                if(s.url.includes('watch?v=')) {
-                    const vid = s.url.split('v=')[1].split('&')[0];
-                    s.url = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}`;
-                }
+                if(s.url.includes('watch?v=')) { const vid = s.url.split('v=')[1].split('&')[0]; s.url = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}`; }
             }
-
             Swal.fire({ icon: 'success', title: 'Editado', text: 'Clique em PUBLICAR para salvar.', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
             renderSlidesList();
         }
@@ -563,12 +514,7 @@
         function handleFile(input) {
             const file = input.files[0];
             if (!file) return;
-            
-            if (file.size > 2.5 * 1024 * 1024) { 
-                Swal.fire('Arquivo Grande', 'Máximo 2.5MB. Para vídeos maiores, use YouTube.', 'warning');
-                input.value = ''; return;
-            }
-
+            if (file.size > 2.5 * 1024 * 1024) { Swal.fire('Arquivo Grande', 'Máximo 2.5MB. Para vídeos maiores, use YouTube.', 'warning'); input.value = ''; return; }
             const reader = new FileReader();
             reader.onload = e => {
                 const s = DATA.slides.find(x => x.id === currentSlideId);
@@ -585,15 +531,10 @@
         function updatePreview(url) {
             const div = document.getElementById('media-preview');
             if (!url) { div.innerHTML = '<span class="text-xs text-gray-500">Sem Mídia</span>'; return; }
-            
             let html = '';
-            if (url.includes('<iframe') || url.includes('youtube') || url.includes('facebook')) {
-                html = '<div class="text-center text-purple-400"><i class="fas fa-globe text-3xl mb-1"></i><br>Link Externo</div>';
-            } else if (url.startsWith('data:video') || url.match(/\.(mp4|webm)$/)) {
-                html = '<video src="'+url+'" class="h-full w-full object-contain" controls></video>';
-            } else {
-                html = `<img src="${url}" class="h-full w-full object-contain">`;
-            }
+            if (url.includes('<iframe') || url.includes('youtube') || url.includes('facebook')) { html = '<div class="text-center text-purple-400"><i class="fas fa-globe text-3xl mb-1"></i><br>Link Externo</div>'; } 
+            else if (url.startsWith('data:video') || url.match(/\.(mp4|webm)$/)) { html = '<video src="'+url+'" class="h-full w-full object-contain" controls></video>'; } 
+            else { html = `<img src="${url}" class="h-full w-full object-contain">`; }
             div.innerHTML = html;
         }
     </script>
