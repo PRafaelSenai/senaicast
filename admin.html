@@ -182,8 +182,13 @@
                         </div>
                         <div class="mt-2 flex items-center bg-gray-700/50 rounded px-2">
                             <i class="fas fa-link text-gray-500 text-xs mr-2"></i>
-                            <input type="text" id="edit-url" class="bg-transparent border-none text-xs text-gray-300 w-full focus:ring-0 py-2" placeholder="URL do arquivo (Automático ou Cole aqui)" readonly>
+                            <!-- CORREÇÃO AQUI: Input liberado (sem readonly) e com oninput -->
+                            <input type="text" id="edit-url" 
+                                class="bg-transparent border-none text-xs text-gray-300 w-full focus:ring-0 py-2" 
+                                placeholder="Cole aqui: Google Drive (Público), YouTube ou Link direto" 
+                                oninput="handleUrlInput(this.value)">
                         </div>
+                        <p class="text-[9px] text-gray-500 mt-1 ml-2">* Dica: Para Google Drive, deixe o arquivo como "Qualquer pessoa com o link".</p>
                     </div>
                     
                     <!-- Campos -->
@@ -211,10 +216,10 @@
     </div>
 
     <script>
-        // --- 🔴 CONFIGURAÇÃO DO SUPABASE (JÁ CONFIGURADAS) 🔴 ---
+        // --- CONFIGURAÇÃO DO SUPABASE ---
         const SUPABASE_URL = "https://pmnmudyseicnroypcmcp.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_WCG4H3nty0gT0LevuIoPFw_ro40Huqh"; 
-        // ---------------------------------------------------------------------
+        // --------------------------------
 
         let supabaseClient;
         let DATA = { slides: [], primaryColor: "#E30613", accentColor: "#0047B6" };
@@ -231,7 +236,7 @@
                 loadData();
             } catch (e) {
                 console.error(e);
-                Swal.fire('Erro', 'Falha ao iniciar Supabase. Verifique as chaves no código.', 'error');
+                Swal.fire('Erro', 'Falha ao iniciar Supabase.', 'error');
             }
         }
 
@@ -239,26 +244,6 @@
             Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
             try {
                 const { data, error } = await supabaseClient.from('app_config').select('data').eq('id', 1).single();
-                
-                // --- TRATAMENTO DO ERRO DE TABELA INEXISTENTE ---
-                if (error && (error.code === 'PGRST205' || error.code === '42P01' || error.message.includes('Could not find the table'))) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Configuração Necessária',
-                        width: '600px',
-                        html: `
-                            <p class="text-sm text-gray-300 mb-4 text-left">O banco de dados do Supabase ainda está vazio.</p>
-                            <ol class="text-xs text-gray-400 text-left list-decimal ml-5 mb-4 space-y-2">
-                                <li>Acesse o SQL Editor do seu Projeto no Supabase.</li>
-                                <li>Rode o script de criação de tabelas (fornecido anteriormente).</li>
-                            </ol>
-                        `,
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#E30613'
-                    });
-                    return;
-                }
-
                 if (error && error.code !== 'PGRST116') throw error; 
 
                 if (data && data.data) {
@@ -268,14 +253,43 @@
                     renderSlidesList();
                     Swal.close();
                 } else {
-                    // Se não existe, tenta criar. Se falhar, é porque o SQL não foi rodado
                     saveToSupabase(true); 
                     Swal.close();
                 }
             } catch (e) {
                 console.error(e);
-                Swal.fire('Erro Conexão', 'Detalhes: ' + e.message, 'error');
+                Swal.fire('Erro Conexão', 'Não foi possível carregar os dados: ' + e.message, 'error');
             }
+        }
+
+        // --- PROCESSAMENTO DE LINKS (DRIVE / YOUTUBE) ---
+        function processUrl(url) {
+            if (!url) return "";
+            
+            // Google Drive
+            const driveRegex = /\/file\/d\/([a-zA-Z0-9_-]+)/;
+            const driveMatch = url.match(driveRegex);
+            if (driveMatch && driveMatch[1]) {
+                return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+            }
+
+            // Youtube
+            if (url.includes('youtube.com/watch?v=') || url.includes('youtu.be/')) {
+                let vid = '';
+                if(url.includes('watch?v=')) vid = url.split('v=')[1].split('&')[0];
+                else if(url.includes('youtu.be/')) vid = url.split('youtu.be/')[1].split('?')[0];
+                
+                // Adiciona Autoplay no link do Youtube
+                if (vid) return `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}`;
+            }
+
+            return url;
+        }
+
+        // Função chamada enquanto você digita a URL
+        window.handleUrlInput = function(val) {
+            const processed = processUrl(val);
+            window.updatePreview(processed);
         }
 
         // --- UPLOAD ---
@@ -287,7 +301,6 @@
 
             try {
                 const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`;
-                
                 const { data, error } = await supabaseClient.storage
                     .from('senaicast-media')
                     .upload(fileName, file, { cacheControl: '3600', upsert: false });
@@ -308,9 +321,7 @@
 
             } catch (e) {
                 console.error(e);
-                let msg = e.message;
-                if(msg.includes("row-level security policy")) msg = "Erro de Permissão: Execute o SQL de configuração no Supabase.";
-                Swal.fire('Erro no Upload', msg, 'error');
+                Swal.fire('Erro no Upload', e.message, 'error');
             } finally {
                 document.getElementById('upload-overlay').classList.remove('active');
                 input.value = ''; 
@@ -330,24 +341,8 @@
             if(!silent) Swal.fire({title: 'Salvando...', didOpen: () => Swal.showLoading()});
 
             try {
-                // CORREÇÃO AQUI: Usa update em vez de upsert para evitar erro de ID
-                const { error } = await supabaseClient
-                    .from('app_config')
-                    .update({ data: cleanData })
-                    .eq('id', 1);
-
-                if (error) {
-                    // Se falhar (ex: linha não existe), tenta insert sem ID (ele gera sozinho)
-                    if(error.details && error.details.includes('0 rows')) {
-                         const { error: insertError } = await supabaseClient
-                            .from('app_config')
-                            .insert({ data: cleanData });
-                         if(insertError) throw insertError;
-                    } else {
-                        throw error;
-                    }
-                }
-                
+                const { error } = await supabaseClient.from('app_config').upsert({ id: 1, data: cleanData });
+                if (error) throw error;
                 if(!silent) Swal.fire('Sucesso!', 'TV Atualizada.', 'success');
             } catch (e) {
                 if(!silent) Swal.fire('Erro ao Salvar', e.message, 'error');
@@ -422,9 +417,12 @@
             s.startDate = document.getElementById('edit-startDate').value;
             s.endDate = document.getElementById('edit-endDate').value;
             
+            // Pega a URL processada pelo input ou mantém a atual
             const urlInput = document.getElementById('edit-url').value;
             if(urlInput && urlInput !== s.url) {
-                s.url = urlInput;
+                const processed = processUrl(urlInput);
+                s.url = processed;
+                
                 if(s.url.match(/\.(mp4|webm)$/i)) s.mediaType = 'video';
                 else if(s.url.includes('youtube') || s.url.includes('drive')) s.mediaType = 'iframe';
                 else s.mediaType = 'image';
@@ -447,11 +445,14 @@
         function updatePreview(url) {
             const div = document.getElementById('media-preview');
             if (!url) { div.innerHTML = 'Sem Mídia'; return; }
-            if (url.includes('supabase.co') || url.startsWith('http')) {
-                if(url.match(/\.(mp4|webm)$/i)) div.innerHTML = `<video src="${url}" class="h-full object-contain" controls></video>`;
-                else div.innerHTML = `<img src="${url}" class="h-full object-contain">`;
+            
+            if (url.includes('youtube') || url.includes('iframe')) {
+                 div.innerHTML = `<iframe src="${url}" class="h-full w-full border-0" allow="autoplay"></iframe>`;
+            } else if (url.match(/\.(mp4|webm)$/i) || url.startsWith('data:video')) {
+                 // VIDEO AUTOPLAY
+                 div.innerHTML = `<video src="${url}" class="h-full object-contain" controls autoplay muted loop></video>`;
             } else {
-                div.innerHTML = 'Mídia Inválida';
+                 div.innerHTML = `<img src="${url}" class="h-full object-contain">`;
             }
         }
     </script>
