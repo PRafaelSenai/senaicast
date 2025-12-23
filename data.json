@@ -1,23 +1,23 @@
 {
-  "primaryColor": "#b91c1c",
-  "accentColor": "#facc15",
-  "zoom": 1,
-  "separatorColor": "#000000",
-  "separatorSpacing": 2,
-  "schoolName": "Orlando Laviero Ferraiuolo",
-  "tickerText": "Bem-vindo ao SENAI | Inscrições Abertas | Segurança em primeiro lugar",
-  "slides": [
-    {
-      "id": 1715431200000,
-      "category": "Boas Vindas",
-      "title": "Bem-vindo ao SENAI",
-      "message": "Estamos felizes em tê-lo aqui. Confira nossa programação.",
-      "layout": "default",
-      "mediaType": "image",
-      "url": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1920&h=1080&fit=crop",
-      "duration": 10,
-      "startDate": null,
-      "endDate": null
-    }
-  ]
+    "primaryColor": "#b91c1c",
+    "accentColor": "#facc15",
+    "zoom": "1.0",
+    "separatorColor": "#000000",
+    "separatorSpacing": "2",
+    "schoolName": "Orlando Laviero Ferraiuolo",
+    "tickerText": "Bem-vindo ao SENAI | Inscrições Abertas | Segurança em primeiro lugar",
+    "slides": [
+        {
+            "id": 1715431200000,
+            "category": "Boas Vindas",
+            "title": "Bem-vindo ao SENAI",
+            "message": "Estamos felizes em tê-lo aqui. Confira nossa programação.",
+            "layout": "default",
+            "mediaType": "image",
+            "url": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1920&h=1080&fit=crop",
+            "duration": 10,
+            "startDate": "",
+            "endDate": ""
+        }
+    ]
 }
