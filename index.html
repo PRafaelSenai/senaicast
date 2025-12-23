@@ -1,238 +1,115 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Digital SENAI</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root { --primary-color: #b91c1c; --accent-color: #facc15; --bg-color: #1a1a1a; --text-scale: 1.0; --separator-color: #000; --separator-spacing: 2rem; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: white; overflow: hidden; font-size: calc(1rem * var(--text-scale)); }
-        #tv-container { width: 100vw; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; background: #000; }
-        
-        /* Cabeçalho */
-        .header-bar { background-color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 30; height: 80px; }
-        .logo-img { height: 50px; object-fit: contain; }
-        .school-name { color: #333; font-size: 1.25rem; font-weight: 700; line-height: 1.1; border-left: 3px solid var(--primary-color); padding-left: 1rem; display: flex; align-items: center; height: 40px; }
-        
-        /* Conteúdo */
-        .content-area { display: grid; grid-template-columns: 35% 65%; overflow: hidden; position: relative; }
-        .content-area.layout-fullscreen { grid-template-columns: 1fr; }
-        .content-area.layout-fullscreen .sidebar { display: none; }
-        .sidebar { background: linear-gradient(135deg, var(--primary-color) 0%, #7f1d1d 100%); padding: 3rem; display: flex; flex-direction: column; justify-content: center; box-shadow: 5px 0 15px rgba(0,0,0,0.3); z-index: 10; }
-        .media-viewer { position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
-        .media-viewer img, .media-viewer video, .media-viewer iframe { width: 100%; height: 100%; object-fit: cover; border: none; }
-        .media-viewer iframe { object-fit: contain; }
+<script>
+const DEFAULT_CONFIG = {
+  primaryColor: "#b91c1c",
+  accentColor: "#facc15",
+  zoom: 1,
+  separatorColor: "#000000",
+  separatorSpacing: 2,
+  schoolName: "SENAI",
+  tickerText: "",
+  slides: []
+};
 
-        /* Rodapé */
-        .news-ticker { background-color: var(--accent-color); color: #000; height: 60px; display: grid; grid-template-columns: auto 1fr; align-items: stretch; overflow: hidden; font-weight: bold; font-size: 1.5rem; white-space: nowrap; z-index: 20; }
-        .ticker-label { background-color: var(--primary-color); color: white; padding: 0 2rem; display: flex; align-items: center; justify-content: center; font-weight: 800; letter-spacing: 1px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 21; }
-        .ticker-track { overflow: hidden; display: flex; align-items: center; position: relative; }
-        .ticker-content { display: inline-block; padding-left: 100%; animation: ticker 30s linear infinite; }
-        .ticker-separator { color: var(--separator-color); margin: 0 var(--separator-spacing); font-size: 1.2em; vertical-align: middle; line-height: 0; position: relative; top: -2px; }
-        @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
-        
-        /* Status de Carregamento */
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: white; display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s; }
-    </style>
-</head>
-<body>
-    <div id="loading-overlay"><div><i class="fas fa-circle-notch fa-spin text-4xl mb-4"></i><br>Carregando Painel...</div></div>
+let SYSTEM_CONFIG = {};
+let currentSlideIndex = 0;
+let slideTimer = null;
 
-    <div id="tv-container" class="opacity-0 transition-opacity duration-1000">
-        <div class="header-bar">
-            <div class="flex items-center gap-4 h-full">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/SENAI_S%C3%A3o_Paulo_logo.png/1200px-SENAI_S%C3%A3o_Paulo_logo.png" alt="Logo" class="logo-img">
-                <h1 class="school-name" id="display-school-name">Escola SENAI</h1>
-            </div>
-            <div class="text-right text-gray-800">
-                <div id="clock-time" class="text-3xl font-mono font-bold leading-none text-red-700">00:00</div>
-                <div id="clock-date" class="text-xs font-bold uppercase text-gray-500">Data...</div>
-            </div>
-        </div>
+async function loadData() {
+  try {
+    const res = await fetch('data.json?t=' + Date.now());
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    SYSTEM_CONFIG = normalizeConfig(data);
+  } catch {
+    SYSTEM_CONFIG = DEFAULT_CONFIG;
+  }
 
-        <div class="content-area" id="main-layout">
-            <div class="sidebar">
-                <div class="mb-4">
-                    <span id="slide-category" class="inline-block px-3 py-1 rounded bg-yellow-400 text-black font-bold text-sm uppercase mb-3 shadow-lg">...</span>
-                    <h2 id="slide-title" class="text-5xl font-bold leading-tight mb-4">...</h2>
-                </div>
-                <div id="slide-message" class="text-xl leading-relaxed border-l-4 border-yellow-400 pl-4 opacity-90">...</div>
-            </div>
-            <div class="media-viewer" id="media-container"></div>
-        </div>
+  applyGlobalSettings();
+  if (!slideTimer) initTV();
+  hideLoading();
+}
 
-        <div class="news-ticker">
-            <div class="ticker-label">AVISOS</div>
-            <div class="ticker-track">
-                <div class="ticker-content" id="display-ticker">...</div>
-            </div>
-        </div>
-    </div>
+function normalizeConfig(cfg) {
+  return {
+    ...DEFAULT_CONFIG,
+    ...cfg,
+    zoom: Number(cfg.zoom) || 1,
+    separatorSpacing: Number(cfg.separatorSpacing) || 2,
+    slides: Array.isArray(cfg.slides) ? cfg.slides : []
+  };
+}
 
-    <script>
-        // Configuração Padrão (Fallback caso não consiga ler o arquivo online)
-        const DEFAULT_CONFIG = {
-            "primaryColor": "#b91c1c",
-            "accentColor": "#facc15",
-            "zoom": "1.0",
-            "separatorColor": "#000000",
-            "separatorSpacing": "2",
-            "schoolName": "Orlando Laviero Ferraiuolo",
-            "tickerText": "Bem-vindo ao SENAI | Inscrições Abertas | Segurança em primeiro lugar",
-            "slides": [
-                {
-                    "id": 1,
-                    "category": "Status",
-                    "title": "Aguardando Conexão",
-                    "message": "Tentando conectar ao banco de dados...",
-                    "layout": "default",
-                    "mediaType": "image",
-                    "url": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1920&h=1080&fit=crop",
-                    "duration": 5
-                }
-            ]
-        };
+function applyGlobalSettings() {
+  const r = document.documentElement;
+  r.style.setProperty('--primary-color', SYSTEM_CONFIG.primaryColor);
+  r.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor);
+  r.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom);
+  r.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor);
+  r.style.setProperty('--separator-spacing', SYSTEM_CONFIG.separatorSpacing + 'rem');
 
-        let SYSTEM_CONFIG = {};
-        let currentSlideIndex = 0;
-        let slideTimer = null;
+  document.getElementById('display-school-name').innerText = SYSTEM_CONFIG.schoolName;
+  document.getElementById('display-ticker').innerHTML =
+    (SYSTEM_CONFIG.tickerText || '').replace(/\|/g, '<span class="ticker-separator">•</span>');
+}
 
-        async function loadData() {
-            try {
-                // Tenta carregar do arquivo (funciona no GitHub/Servidor)
-                // Usamos location.origin para tentar montar url absoluta se possível, mas fetch relativo costuma funcionar em servidor
-                const response = await fetch('data.json?t=' + Date.now());
-                if (!response.ok) throw new Error('Falha ao carregar dados ou arquivo inexistente');
-                
-                const newData = await response.json();
-                
-                // Se houve mudança nos dados, reinicia a exibição
-                if (JSON.stringify(newData) !== JSON.stringify(SYSTEM_CONFIG)) {
-                    SYSTEM_CONFIG = newData;
-                    applyGlobalSettings();
-                    hideLoading();
-                    // Reinicia o loop se for a primeira vez
-                    if (!slideTimer) initTV(); 
-                }
-            } catch (error) {
-                console.warn("Modo Offline/Fallback ativado:", error);
-                
-                // Se falhar (ex: rodando local ou sem o arquivo), usa o padrão
-                // Só aplica o padrão se a configuração estiver vazia (primeira carga)
-                if (Object.keys(SYSTEM_CONFIG).length === 0) {
-                    SYSTEM_CONFIG = DEFAULT_CONFIG;
-                    applyGlobalSettings();
-                    hideLoading();
-                    if (!slideTimer) initTV();
-                }
-            }
-        }
+function initTV() {
+  const now = new Date();
+  const slides = SYSTEM_CONFIG.slides.filter(s => {
+    const start = s.startDate ? new Date(s.startDate) : null;
+    const end = s.endDate ? new Date(s.endDate) : null;
+    if (start && !isNaN(start) && now < start) return false;
+    if (end && !isNaN(end) && now > end) return false;
+    return true;
+  });
 
-        function hideLoading() {
-            const loader = document.getElementById('loading-overlay');
-            if(loader) {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.remove(), 500);
-                document.getElementById('tv-container').classList.remove('opacity-0');
-            }
-        }
+  if (!slides.length) return;
 
-        function applyGlobalSettings() {
-            const root = document.documentElement;
-            root.style.setProperty('--primary-color', SYSTEM_CONFIG.primaryColor || DEFAULT_CONFIG.primaryColor);
-            root.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor || DEFAULT_CONFIG.accentColor);
-            root.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom || "1.0");
-            root.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor || '#000000');
-            root.style.setProperty('--separator-spacing', (SYSTEM_CONFIG.separatorSpacing || 2) + 'rem');
-            
-            document.getElementById('display-school-name').innerText = SYSTEM_CONFIG.schoolName || "SENAI";
-            const sepHtml = `<span class="ticker-separator">•</span>`;
-            document.getElementById('display-ticker').innerHTML = (SYSTEM_CONFIG.tickerText || "").replace(/\|/g, sepHtml);
-        }
+  if (currentSlideIndex >= slides.length) currentSlideIndex = 0;
+  const slide = slides[currentSlideIndex];
+  renderSlide(slide);
 
-        function initTV() {
-            const now = new Date();
-            if (!SYSTEM_CONFIG.slides) return;
+  clearTimeout(slideTimer);
+  slideTimer = setTimeout(() => {
+    currentSlideIndex++;
+    initTV();
+  }, (slide.duration || 10) * 1000);
+}
 
-            const activeSlides = SYSTEM_CONFIG.slides.filter(s => {
-                const start = s.startDate ? new Date(s.startDate) : null;
-                const end = s.endDate ? new Date(s.endDate) : null;
-                
-                // Validação de datas
-                if (start && !isNaN(start.getTime()) && now < start) return false;
-                if (end && !isNaN(end.getTime()) && now > end) return false;
-                
-                return true;
-            });
+function renderSlide(slide) {
+  document.getElementById('slide-category').innerText = slide.category || '';
+  document.getElementById('slide-title').innerText = slide.title || '';
+  document.getElementById('slide-message').innerText = slide.message || '';
 
-            if (activeSlides.length === 0) {
-                renderPlaceholder();
-                clearTimeout(slideTimer);
-                slideTimer = setTimeout(initTV, 10000); // Tenta de novo em 10s
-                return;
-            }
+  const layout = document.getElementById('main-layout');
+  slide.layout === 'fullscreen'
+    ? layout.classList.add('layout-fullscreen')
+    : layout.classList.remove('layout-fullscreen');
 
-            if (currentSlideIndex >= activeSlides.length) currentSlideIndex = 0;
-            const slide = activeSlides[currentSlideIndex];
-            renderSlide(slide);
+  const media = document.getElementById('media-container');
+  media.innerHTML = '';
 
-            clearTimeout(slideTimer);
-            let duration = (slide.duration || 10) * 1000;
-            if (slide.mediaType === 'video') duration += 5000; // Segurança para videos
+  let el;
+  if (slide.mediaType === 'video') {
+    el = document.createElement('video');
+    el.src = slide.url;
+    el.autoplay = true;
+    el.muted = true;
+  } else if (slide.mediaType === 'iframe') {
+    el = document.createElement('iframe');
+    el.src = slide.url;
+  } else {
+    el = document.createElement('img');
+    el.src = slide.url;
+  }
 
-            slideTimer = setTimeout(() => {
-                currentSlideIndex++;
-                initTV();
-            }, duration);
-        }
+  media.appendChild(el);
+}
 
-        function renderSlide(slide) {
-            document.getElementById('slide-category').innerText = slide.category || '';
-            document.getElementById('slide-title').innerText = slide.title || '';
-            document.getElementById('slide-message').innerText = slide.message || '';
-            
-            const layout = document.getElementById('main-layout');
-            if (slide.layout === 'fullscreen') layout.classList.add('layout-fullscreen');
-            else layout.classList.remove('layout-fullscreen');
+function hideLoading() {
+  const l = document.getElementById('loading-overlay');
+  if (l) l.remove();
+}
 
-            const container = document.getElementById('media-container');
-            container.innerHTML = '';
-            
-            let el;
-            if (slide.mediaType === 'video') {
-                el = document.createElement('video');
-                el.src = slide.url; el.autoplay = true; el.muted = true;
-                el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
-                el.onerror = () => { console.log("Erro video, pulando"); clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
-            } else if (slide.mediaType === 'iframe') {
-                el = document.createElement('iframe');
-                el.src = slide.url; el.allow = "autoplay";
-            } else {
-                el = document.createElement('img');
-                el.src = slide.url;
-                el.onerror = () => { el.src = 'https://via.placeholder.com/1920x1080?text=Erro+Imagem'; };
-            }
-            container.appendChild(el);
-        }
-
-        function renderPlaceholder() {
-            document.getElementById('slide-title').innerText = "Aguardando";
-            document.getElementById('slide-message').innerText = "Nenhum conteúdo programado para este horário.";
-            document.getElementById('media-container').innerHTML = '';
-        }
-
-        // Relógio
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('clock-time').innerText = now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-            document.getElementById('clock-date').innerText = now.toLocaleDateString('pt-BR', {weekday: 'long', day: 'numeric', month: 'long'});
-        }, 1000);
-
-        // Inicia e verifica atualizações a cada 30 segundos
-        loadData();
-        setInterval(loadData, 30000); 
-    </script>
-</body>
-</html>
+loadData();
+setInterval(loadData, 30000);
+</script>
