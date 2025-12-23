@@ -224,6 +224,7 @@
         let supabaseClient;
         let DATA = { slides: [], primaryColor: "#E30613", accentColor: "#0047B6" };
         let currentSlideId = null;
+        let configId = null; // Armazena o ID real da configuração no banco
 
         // INICIALIZAÇÃO
         window.onload = () => {
@@ -243,16 +244,26 @@
         async function loadData() {
             Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
             try {
-                const { data, error } = await supabaseClient.from('app_config').select('data').eq('id', 1).single();
-                if (error && error.code !== 'PGRST116') throw error; 
+                // CORREÇÃO: Busca QUALQUER linha de configuração (não força ID 1)
+                const { data, error } = await supabaseClient
+                    .from('app_config')
+                    .select('id, data')
+                    .limit(1)
+                    .maybeSingle(); // maybeSingle evita erro se não tiver nada
 
-                if (data && data.data) {
-                    DATA = { ...DATA, ...data.data };
-                    if (!Array.isArray(DATA.slides)) DATA.slides = [];
-                    populateUI();
-                    renderSlidesList();
+                if (error) throw error;
+
+                if (data) {
+                    configId = data.id; // Guarda o ID que veio do banco
+                    if (data.data) {
+                        DATA = { ...DATA, ...data.data };
+                        if (!Array.isArray(DATA.slides)) DATA.slides = [];
+                        populateUI();
+                        renderSlidesList();
+                    }
                     Swal.close();
                 } else {
+                    // Se estiver vazio, cria o primeiro registro
                     saveToSupabase(true); 
                     Swal.close();
                 }
@@ -341,7 +352,24 @@
             if(!silent) Swal.fire({title: 'Salvando...', didOpen: () => Swal.showLoading()});
 
             try {
-                const { error } = await supabaseClient.from('app_config').upsert({ id: 1, data: cleanData });
+                let error;
+                // CORREÇÃO CRÍTICA: Se já temos um ID, atualiza ele. Se não, cria um novo.
+                if (configId) {
+                    const res = await supabaseClient
+                        .from('app_config')
+                        .update({ data: cleanData })
+                        .eq('id', configId);
+                    error = res.error;
+                } else {
+                    const res = await supabaseClient
+                        .from('app_config')
+                        .insert({ data: cleanData })
+                        .select('id')
+                        .single();
+                    if (res.data) configId = res.data.id;
+                    error = res.error;
+                }
+
                 if (error) throw error;
                 if(!silent) Swal.fire('Sucesso!', 'TV Atualizada.', 'success');
             } catch (e) {
