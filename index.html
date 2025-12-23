@@ -9,7 +9,20 @@
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary-color: #E30613; --accent-color: #0047B6; --text-scale: 1.0; --separator-color: #000; --separator-spacing: 2rem; }
+        /* Variáveis Padrão (serão sobrescritas pelo JS) */
+        :root { 
+            --primary-color: #E30613; 
+            --accent-color: #0047B6; 
+            --text-scale: 1.0; 
+            --separator-color: #000; 
+            --separator-spacing: 2rem; 
+            
+            /* Novas Variáveis para o Ticker */
+            --ticker-bg: #0047B6;
+            --ticker-color: #FFFFFF;
+            --ticker-duration: 30s;
+        }
+
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: white; overflow: hidden; font-size: calc(1rem * var(--text-scale)); }
         #tv-container { width: 100vw; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; background: #000; }
         .header-bar { background-color: var(--primary-color); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 30; height: 80px; }
@@ -22,12 +35,39 @@
         .media-viewer { position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
         .media-viewer img, .media-viewer video, .media-viewer iframe { width: 100%; height: 100%; object-fit: cover; border: none; }
         .media-viewer iframe { object-fit: contain; }
-        .news-ticker { background-color: var(--accent-color); color: white; height: 60px; display: grid; grid-template-columns: auto 1fr; align-items: stretch; overflow: hidden; font-weight: bold; font-size: 1.5rem; white-space: nowrap; z-index: 20; }
-        .ticker-label { background-color: #003380; color: white; padding: 0 2rem; display: flex; align-items: center; justify-content: center; font-weight: 800; letter-spacing: 1px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 21; }
+        
+        /* Ticker Personalizado */
+        .news-ticker { 
+            background-color: var(--ticker-bg); 
+            color: var(--ticker-color); 
+            height: 60px; 
+            display: grid; 
+            grid-template-columns: auto 1fr; 
+            align-items: stretch; 
+            overflow: hidden; 
+            font-weight: bold; 
+            font-size: 1.5rem; 
+            white-space: nowrap; 
+            z-index: 20; 
+        }
+        .ticker-label { 
+            background-color: rgba(0,0,0,0.2); /* Escurece um pouco a cor de fundo */
+            color: inherit; 
+            padding: 0 2rem; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 800; 
+            letter-spacing: 1px; 
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1); 
+            z-index: 21; 
+        }
         .ticker-track { overflow: hidden; display: flex; align-items: center; position: relative; }
-        .ticker-content { display: inline-block; padding-left: 100%; animation: ticker 30s linear infinite; }
+        .ticker-content { display: inline-block; padding-left: 100%; animation: ticker var(--ticker-duration) linear infinite; }
         .ticker-separator { color: var(--separator-color); margin: 0 var(--separator-spacing); font-size: 1.2em; vertical-align: middle; line-height: 0; position: relative; top: -2px; }
+        
         @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+        
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: white; display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s; }
     </style>
 </head>
@@ -91,7 +131,7 @@
                         if (payload.new && payload.new.data) {
                             SYSTEM_CONFIG = payload.new.data;
                             applyGlobalSettings();
-                            if(!slideTimer) initTV(); // Se estava parado, recomeça
+                            if(!slideTimer) initTV(); 
                         }
                     })
                     .subscribe();
@@ -123,6 +163,11 @@
             root.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom || "1.0");
             root.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor || '#000000');
             root.style.setProperty('--separator-spacing', (SYSTEM_CONFIG.separatorSpacing || 2) + 'rem');
+            
+            // Novas Variáveis de Ticker
+            root.style.setProperty('--ticker-bg', SYSTEM_CONFIG.tickerBg || SYSTEM_CONFIG.accentColor || '#0047B6');
+            root.style.setProperty('--ticker-color', SYSTEM_CONFIG.tickerColor || '#FFFFFF');
+            root.style.setProperty('--ticker-duration', (SYSTEM_CONFIG.tickerSpeed || 30) + 's');
             
             document.getElementById('display-school-name').innerText = SYSTEM_CONFIG.schoolName || "SENAI";
             const sepHtml = `<span class="ticker-separator">•</span>`;
