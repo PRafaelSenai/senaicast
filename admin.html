@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Painel SENAI</title>
+    <title>Gerenciador Senaicast</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -18,15 +18,17 @@
 </head>
 <body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
 
-    <!-- CABEÇALHO COM NOME CORRIGIDO -->
     <header class="bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-6 shrink-0 z-20">
         <div class="flex items-center gap-3">
             <div class="bg-yellow-500 text-black w-8 h-8 rounded flex items-center justify-center font-bold"><i class="fas fa-fire"></i></div>
             <h1 class="text-lg font-bold tracking-wide">Gerenciador Senaicast</h1>
         </div>
-        <button onclick="saveToFirebase()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold shadow-lg flex items-center gap-2 transform hover:scale-105 transition">
-            <i class="fas fa-cloud-upload-alt"></i> SALVAR NA TV
-        </button>
+        <div class="flex items-center gap-4">
+            <div class="text-xs text-gray-400" id="db-status">Verificando peso...</div>
+            <button onclick="saveToFirebase()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold shadow-lg flex items-center gap-2 transform hover:scale-105 transition">
+                <i class="fas fa-cloud-upload-alt"></i> SALVAR NA TV
+            </button>
+        </div>
     </header>
 
     <div class="flex flex-1 overflow-hidden">
@@ -61,11 +63,11 @@
             <div id="editor-form" class="hidden absolute inset-0 overflow-y-auto p-8 bg-gray-900">
                 <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-xl space-y-6">
                     <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Mídia</label>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Mídia (Automático: Comprimido para Web)</label>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="border-2 border-dashed border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-gray-700/50 cursor-pointer relative group h-48">
                                 <input type="file" id="file-upload" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleFile(this)">
-                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-500 mb-2"></i><span class="text-sm font-medium text-gray-300">Upload (PC)</span>
+                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-500 mb-2"></i><span class="text-sm font-medium text-gray-300" id="upload-text">Upload (PC)</span>
                             </div>
                             <div class="bg-black rounded-lg border border-gray-700 flex items-center justify-center overflow-hidden h-48" id="media-preview"><span class="text-xs text-gray-500">Preview</span></div>
                         </div>
@@ -99,18 +101,10 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-        // --- SISTEMA DE BLINDAGEM CONTRA ERROS DE UI ---
         if (typeof Swal === 'undefined') {
-            window.Swal = {
-                fire: async (opts) => {
-                    const confirmed = confirm((opts.title || '') + "\n" + (opts.text || ''));
-                    return { isConfirmed: confirmed };
-                },
-                showLoading: () => {}, close: () => {}
-            };
+            window.Swal = { fire: async (o) => { return { isConfirmed: confirm(o.title + "\n" + o.text) }; }, showLoading: () => {}, close: () => {} };
         }
 
-        // --- CONFIGURAÇÃO DO FIREBASE (SUAS CHAVES) ---
         const firebaseConfig = {
             apiKey: "AIzaSyCDRfhHT3zx6KRS6UIWAMcUfVos0IqdpHM",
             authDomain: "senaicast-edc28.firebaseapp.com",
@@ -122,50 +116,55 @@
         };
 
         let app, db;
-        try {
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-        } catch(e) {
-            console.error("Erro init:", e);
-            alert("Erro crítico ao iniciar Firebase. Verifique o console.");
-        }
+        try { app = initializeApp(firebaseConfig); db = getFirestore(app); } catch(e) { console.error("Erro init:", e); }
 
         window.DATA = { slides: [], primaryColor: "#b91c1c", accentColor: "#facc15" };
         window.currentSlideId = null;
 
-        // --- FUNÇÕES ---
-
-        // Função de Limpeza de Dados (Evita erro "Invalid nested entity")
+        // Limpeza e Validação de Dados
         function cleanPayload(data) {
-            // Clona o objeto para não alterar a referência original
-            const clean = JSON.parse(JSON.stringify(data));
-            
-            // Garante que slides é um array
-            if (!Array.isArray(clean.slides)) clean.slides = [];
+            const safe = {
+                primaryColor: data.primaryColor || "#b91c1c",
+                accentColor: data.accentColor || "#facc15",
+                zoom: data.zoom || "1.0",
+                separatorColor: data.separatorColor || "#000000",
+                separatorSpacing: data.separatorSpacing || "2",
+                tickerText: data.tickerText || "",
+                schoolName: data.schoolName || "",
+                slides: []
+            };
+            if (Array.isArray(data.slides)) {
+                safe.slides = data.slides.map(s => ({
+                    id: Number(s.id) || Date.now(),
+                    title: String(s.title || ""),
+                    category: String(s.category || ""),
+                    message: String(s.message || ""),
+                    layout: String(s.layout || "default"),
+                    mediaType: String(s.mediaType || "image"),
+                    url: String(s.url || ""),
+                    duration: Number(s.duration) || 10,
+                    startDate: String(s.startDate || ""),
+                    endDate: String(s.endDate || "")
+                }));
+            }
+            return JSON.parse(JSON.stringify(safe));
+        }
 
-            // Limpa cada slide
-            clean.slides = clean.slides.map(s => {
-                return {
-                    id: s.id || Date.now(),
-                    title: s.title || "",
-                    category: s.category || "",
-                    message: s.message || "",
-                    layout: s.layout || "default",
-                    mediaType: s.mediaType || "image",
-                    url: s.url || "",
-                    // Converte duração para número, se falhar vira 10
-                    duration: (parseInt(s.duration) || 10),
-                    startDate: s.startDate || "",
-                    endDate: s.endDate || ""
-                };
-            });
-
-            // Limpa configs globais
-            clean.primaryColor = clean.primaryColor || "#b91c1c";
-            clean.accentColor = clean.accentColor || "#facc15";
-            clean.separatorColor = clean.separatorColor || "#000000";
+        // Calcula tamanho do banco (aprox)
+        function checkSize() {
+            const json = JSON.stringify(window.DATA);
+            const size = new Blob([json]).size;
+            const statusEl = document.getElementById('db-status');
+            const kb = Math.round(size / 1024);
             
-            return clean;
+            if (kb > 900) {
+                statusEl.innerHTML = `<span class="text-red-500 font-bold">⚠️ CRÍTICO: ${kb}KB (Max 1000KB)</span>`;
+            } else if (kb > 700) {
+                statusEl.innerHTML = `<span class="text-yellow-500">⚠️ Atenção: ${kb}KB</span>`;
+            } else {
+                statusEl.innerHTML = `<span class="text-green-500">OK: ${kb}KB</span>`;
+            }
+            return kb;
         }
 
         window.loadData = async function() {
@@ -175,25 +174,18 @@
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     window.DATA = { ...window.DATA, ...docSnap.data() };
-                    // Força limpeza ao carregar também
-                    window.DATA.slides.forEach(s => { if(!s.duration) s.duration = 10; });
-                    populateUI();
-                    renderSlidesList();
-                    Swal.close();
+                    if (!Array.isArray(window.DATA.slides)) window.DATA.slides = [];
+                    populateUI(); renderSlidesList(); checkSize(); Swal.close();
                 } else {
-                    Swal.fire('Bem-vindo', 'Primeiro acesso. Banco criado.', 'success');
-                    saveToFirebase();
+                    saveToFirebase(); Swal.close();
                 }
             } catch (error) {
                 console.error(error);
-                let msg = error.message;
-                if (error.code === 'permission-denied') msg = "Erro de Permissão: Verifique se as Regras do Firestore estão em 'Modo Teste'.";
-                Swal.fire('Erro', msg, 'error');
+                Swal.fire('Erro', error.message, 'error');
             }
         };
 
         window.saveToFirebase = async function() {
-            // 1. Coleta dados da interface
             window.DATA.primaryColor = document.getElementById('conf-primary').value;
             window.DATA.accentColor = document.getElementById('conf-accent').value;
             window.DATA.zoom = document.getElementById('conf-zoom').value;
@@ -201,21 +193,21 @@
             window.DATA.tickerText = document.getElementById('conf-ticker').value;
             window.DATA.schoolName = document.getElementById('conf-school').value;
 
-            // 2. Limpeza dos dados antes de enviar
-            const safeData = cleanPayload(window.DATA);
+            // Verifica tamanho ANTES de enviar
+            if (checkSize() > 950) {
+                return Swal.fire('Banco Cheio!', 'O limite gratuito do Firebase é 1MB por documento. Remova alguns slides antigos ou use vídeos do YouTube para liberar espaço.', 'error');
+            }
 
+            const safeData = cleanPayload(window.DATA);
             Swal.fire({title: 'Salvando...', didOpen: () => Swal.showLoading()});
             try {
-                // Salva os dados limpos
                 await setDoc(doc(db, "senaicast", "config"), safeData);
-                Swal.fire('Sucesso!', 'Dados salvos e limpos.', 'success');
+                Swal.fire('Sucesso!', 'TV atualizada.', 'success');
             } catch (error) {
-                console.error("Erro detalhado:", error);
-                Swal.fire('Erro', 'Não foi possível salvar: ' + error.message, 'error');
+                Swal.fire('Erro', 'Falha ao salvar: ' + error.message, 'error');
             }
         };
 
-        // UI Helpers
         window.populateUI = function() {
             document.getElementById('conf-primary').value = window.DATA.primaryColor || '#b91c1c';
             document.getElementById('conf-accent').value = window.DATA.accentColor || '#facc15';
@@ -228,11 +220,11 @@
         window.renderSlidesList = function() {
             const list = document.getElementById('slides-list');
             list.innerHTML = '';
-            window.DATA.slides.forEach(s => {
+            (window.DATA.slides || []).forEach(s => {
                 const div = document.createElement('div');
                 div.className = `slide-card p-3 rounded cursor-pointer border border-transparent hover:bg-gray-800 mb-2 ${s.id === window.currentSlideId ? 'active' : 'bg-gray-800/50'}`;
                 div.onclick = () => window.loadSlide(s.id);
-                div.innerHTML = `<div class="font-bold text-sm truncate">${s.title || 'Sem Título'}</div><div class="text-[10px] text-gray-400">${s.category}</div>`;
+                div.innerHTML = `<div class="font-bold text-sm truncate">${s.title || 'Sem Título'}</div><div class="text-[10px] text-gray-400">${s.category || ''}</div>`;
                 list.appendChild(div);
             });
         };
@@ -240,8 +232,7 @@
         window.addNewSlide = function() {
             const id = Date.now();
             window.DATA.slides.push({ id, category: 'Aviso', title: 'Novo', message: '', layout: 'default', mediaType: 'image', url: '', duration: 10 });
-            window.loadSlide(id);
-            window.renderSlidesList();
+            window.loadSlide(id); window.renderSlidesList(); checkSize();
         };
 
         window.loadSlide = function(id) {
@@ -250,7 +241,6 @@
             if (!s) return;
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-form').classList.remove('hidden');
-            
             document.getElementById('edit-title').value = s.title || "";
             document.getElementById('edit-category').value = s.category || "";
             document.getElementById('edit-message').value = s.message || "";
@@ -259,7 +249,6 @@
             document.getElementById('edit-startDate').value = s.startDate || '';
             document.getElementById('edit-endDate').value = s.endDate || '';
             document.getElementById('edit-url').value = (s.url && !s.url.startsWith('data:')) ? s.url : '';
-            
             window.updatePreview(s.url);
             window.renderSlidesList();
         };
@@ -271,25 +260,19 @@
             s.category = document.getElementById('edit-category').value;
             s.message = document.getElementById('edit-message').value;
             s.layout = document.getElementById('edit-layout').value;
-            
-            // Converte para Inteiro na hora, evita string vazia ou NaN
             let dur = parseInt(document.getElementById('edit-duration').value);
             if(isNaN(dur) || dur < 1) dur = 10;
             s.duration = dur;
-
             s.startDate = document.getElementById('edit-startDate').value;
             s.endDate = document.getElementById('edit-endDate').value;
-            
             const urlInput = document.getElementById('edit-url').value.trim();
             if(urlInput) {
                 s.url = urlInput;
-                if(urlInput.includes('youtube')) s.mediaType = 'iframe';
-                else s.mediaType = 'image';
+                if(urlInput.includes('youtube')) s.mediaType = 'iframe'; else s.mediaType = 'image';
                 if(s.url.includes('watch?v=')) s.url = `https://www.youtube.com/embed/${s.url.split('v=')[1].split('&')[0]}?autoplay=1&mute=1`;
             }
-            
-            Swal.fire({icon: 'success', title: 'Editado', text: 'Não esqueça de clicar em SALVAR NA TV.', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
-            window.renderSlidesList();
+            Swal.fire({icon: 'success', title: 'Editado', text: 'Clique em SALVAR NA TV.', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
+            window.renderSlidesList(); checkSize();
         };
 
         window.deleteSlide = function() {
@@ -298,25 +281,71 @@
                 window.currentSlideId = null;
                 document.getElementById('editor-form').classList.add('hidden');
                 document.getElementById('no-selection').classList.remove('hidden');
-                window.renderSlidesList();
+                window.renderSlidesList(); checkSize();
             }
         };
 
+        // --- COMPRESSÃO DE IMAGEM ---
         window.handleFile = function(input) {
             const file = input.files[0];
             if (!file) return;
+            const btnText = document.getElementById('upload-text');
+            btnText.innerText = "Comprimindo...";
+
             const reader = new FileReader();
             reader.onload = e => {
-                const s = window.DATA.slides.find(x => x.id === window.currentSlideId);
-                if(s) {
-                    s.url = e.target.result;
-                    s.mediaType = file.type.startsWith('video') ? 'video' : 'image';
-                    document.getElementById('edit-url').value = '';
-                    window.updatePreview(s.url);
+                // Se for vídeo, não comprime (cuidado com tamanho)
+                if(file.type.startsWith('video')) {
+                    if (file.size > 2 * 1024 * 1024) { // 2MB Limit
+                        alert("Vídeo muito grande! Use YouTube ou max 2MB.");
+                        btnText.innerText = "Upload (PC)";
+                        return;
+                    }
+                    saveImageToSlide(e.target.result, 'video');
+                    btnText.innerText = "Upload (PC)";
+                    return;
                 }
+
+                // Compressão de Imagem
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Redimensiona para HD (max 1280px)
+                    const MAX_WIDTH = 1280; 
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Converte para JPG qualidade 0.6 (60%)
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                    saveImageToSlide(compressedDataUrl, 'image');
+                    btnText.innerText = "Upload (PC)";
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         };
+
+        function saveImageToSlide(dataUrl, type) {
+            const s = window.DATA.slides.find(x => x.id === window.currentSlideId);
+            if(s) {
+                s.url = dataUrl;
+                s.mediaType = type;
+                document.getElementById('edit-url').value = '';
+                window.updatePreview(s.url);
+                checkSize();
+            }
+        }
 
         window.updatePreview = function(url) {
             const div = document.getElementById('media-preview');
@@ -326,13 +355,7 @@
             else div.innerHTML = `<img src="${url}" class="h-full object-contain">`;
         };
 
-        // Iniciar
-        if(window.location.protocol !== 'file:') {
-            window.loadData();
-        } else {
-            alert("AVISO: Você está rodando localmente. Algumas funções podem não funcionar corretamente. Use o GitHub Pages.");
-        }
-
+        window.loadData();
     </script>
 </body>
 </html>
