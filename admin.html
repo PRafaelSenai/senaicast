@@ -4,15 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Painel SENAI</title>
-    <!-- Tailwind CSS para Estilo -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Ícones -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Alertas Bonitos -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        /* Estilização Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
@@ -27,13 +23,18 @@
             font-size: 0.875rem;
         }
         .input-dark:focus { border-color: #facc15; outline: none; }
-        
         .slide-card.active { border-left: 4px solid #facc15; background-color: #374151; }
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
 
-    <!-- 1. TELA DE LOGIN (Conexão GitHub) -->
+    <!-- AVISO DE PROTOCOLO (SE ABRIR LOCAL) -->
+    <div id="local-warning" class="hidden fixed top-0 left-0 w-full bg-red-600 text-white p-4 text-center font-bold z-[100]">
+        ⚠️ ERRO: Você abriu este arquivo no seu computador (file://).<br>
+        O Painel só funciona online! Acesse pelo link: <span id="online-link" class="underline"></span>
+    </div>
+
+    <!-- TELA DE LOGIN -->
     <div id="auth-modal" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 p-8 rounded-xl max-w-md w-full border border-gray-700 shadow-2xl">
             <div class="text-center mb-6">
@@ -43,7 +44,7 @@
             
             <div class="space-y-4">
                 <div>
-                    <label class="text-xs font-bold text-gray-500 uppercase">Usuário</label>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Usuário GitHub</label>
                     <input type="text" id="gh-user" value="PRafaelSenai" class="input-dark">
                 </div>
                 <div>
@@ -61,7 +62,7 @@
         </div>
     </div>
 
-    <!-- 2. CABEÇALHO SUPERIOR -->
+    <!-- HEADER -->
     <header class="bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-6 shrink-0 z-20">
         <div class="flex items-center gap-3">
             <div class="bg-yellow-500 text-black w-8 h-8 rounded flex items-center justify-center font-bold"><i class="fas fa-tv"></i></div>
@@ -77,10 +78,10 @@
         </div>
     </header>
 
-    <!-- 3. ÁREA PRINCIPAL (3 Colunas) -->
+    <!-- ÁREA PRINCIPAL -->
     <div class="flex flex-1 overflow-hidden" id="main-interface" class="hidden">
         
-        <!-- COLUNA ESQUERDA: CONFIGURAÇÕES GERAIS -->
+        <!-- SIDEBAR CONFIGURAÇÃO -->
         <aside class="w-72 bg-gray-800 border-r border-gray-700 overflow-y-auto flex flex-col custom-scrollbar">
             <div class="p-5">
                 <h3 class="text-xs font-bold text-yellow-500 uppercase tracking-wider mb-4 border-b border-gray-700 pb-2">
@@ -88,7 +89,6 @@
                 </h3>
                 
                 <div class="space-y-5">
-                    <!-- Cores -->
                     <div>
                         <label class="text-xs text-gray-300 block mb-1">Cor Principal</label>
                         <div class="flex gap-2">
@@ -105,7 +105,6 @@
                         </div>
                     </div>
 
-                    <!-- Zoom -->
                     <div>
                         <label class="text-xs text-gray-300 block mb-1 flex justify-between">
                             <span>Zoom da Fonte</span>
@@ -116,33 +115,31 @@
 
                     <div class="h-px bg-gray-700"></div>
 
-                    <!-- Rodapé / Avisos -->
                     <h3 class="text-xs font-bold text-yellow-500 uppercase tracking-wider border-b border-gray-700 pb-2">
                         <i class="fas fa-bullhorn mr-1"></i> Rodapé / Avisos
                     </h3>
 
                     <div>
-                        <label class="text-xs text-gray-300 block mb-1">Cor do Separador (Bolinha)</label>
+                        <label class="text-xs text-gray-300 block mb-1">Cor do Separador</label>
                         <input type="color" id="conf-sep-color" class="h-8 w-full rounded cursor-pointer bg-transparent border border-gray-600">
                     </div>
 
                     <div>
-                        <label class="text-xs text-gray-300 block mb-1">Espaçamento (rem)</label>
+                        <label class="text-xs text-gray-300 block mb-1">Espaçamento</label>
                         <div class="flex items-center gap-2">
                             <input type="range" id="conf-sep-spacing-range" min="1" max="10" step="0.5" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500">
                             <span id="spacing-val" class="text-xs text-gray-400 w-10 text-right">2.0rem</span>
                         </div>
-                        <input type="hidden" id="conf-sep-spacing"> <!-- Armazena valor -->
+                        <input type="hidden" id="conf-sep-spacing"> 
                     </div>
 
                     <div>
                         <label class="text-xs text-gray-300 block mb-1">Notícias (separe por | )</label>
-                        <textarea id="conf-ticker" class="input-dark h-24 text-xs leading-relaxed" placeholder="Notícia 1 | Notícia 2"></textarea>
+                        <textarea id="conf-ticker" class="input-dark h-24 text-xs leading-relaxed"></textarea>
                     </div>
 
                     <div class="h-px bg-gray-700"></div>
 
-                    <!-- Institucional -->
                     <h3 class="text-xs font-bold text-yellow-500 uppercase tracking-wider border-b border-gray-700 pb-2">
                         <i class="fas fa-university mr-1"></i> Institucional
                     </h3>
@@ -154,20 +151,20 @@
             </div>
         </aside>
 
-        <!-- COLUNA MEIO: LISTA DE SLIDES -->
+        <!-- SIDEBAR LISTA -->
         <aside class="w-80 bg-gray-900 border-r border-gray-700 flex flex-col">
             <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800">
                 <h3 class="font-bold text-sm text-white">Slides</h3>
                 <button onclick="addNewSlide()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded font-bold transition">
-                    <i class="fas fa-plus mr-1"></i> NOVO SLIDE
+                    <i class="fas fa-plus mr-1"></i> NOVO
                 </button>
             </div>
             <div id="slides-list" class="flex-1 overflow-y-auto p-2 space-y-2">
-                <!-- Lista gerada via JS -->
+                <!-- Lista -->
             </div>
         </aside>
 
-        <!-- COLUNA DIREITA: EDITOR DE SLIDE -->
+        <!-- EDITOR -->
         <main class="flex-1 bg-black relative">
             <div id="no-selection" class="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
                 <i class="fas fa-hand-pointer text-5xl mb-4 opacity-50"></i>
@@ -176,28 +173,25 @@
 
             <div id="editor-form" class="hidden absolute inset-0 overflow-y-auto p-8 bg-gray-900">
                 <div class="max-w-4xl mx-auto">
-                    <!-- Topo Editor -->
                     <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
                         <h2 class="text-2xl font-bold text-white flex items-center gap-2">
                             <span class="w-2 h-8 bg-yellow-500 rounded"></span> Editar Slide
                         </h2>
                         <button onclick="deleteSlide()" class="text-red-400 hover:text-red-300 text-sm font-bold border border-red-900 px-3 py-1 rounded bg-red-900/20 hover:bg-red-900/40">
-                            <i class="fas fa-trash-alt mr-2"></i> Excluir Slide
+                            <i class="fas fa-trash-alt mr-2"></i> Excluir
                         </button>
                     </div>
 
-                    <!-- Formulário -->
                     <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-xl space-y-6">
                         
-                        <!-- Upload Mídia -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Mídia (Imagem ou Vídeo)</label>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Mídia</label>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="border-2 border-dashed border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-gray-700/50 transition cursor-pointer relative group h-48">
                                     <input type="file" id="file-upload" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleFile(this)">
                                     <i class="fas fa-cloud-upload-alt text-4xl text-gray-500 mb-2 group-hover:text-blue-400 transition"></i>
-                                    <span class="text-sm font-medium text-gray-300">Clique para carregar do PC</span>
-                                    <span class="text-[10px] text-gray-500 mt-1">Imagens (JPG/PNG) ou Vídeos Curtos (MP4)</span>
+                                    <span class="text-sm font-medium text-gray-300">Carregar do PC</span>
+                                    <span class="text-[10px] text-gray-500 mt-1">Imagens (JPG/PNG) ou MP4</span>
                                 </div>
                                 <div class="bg-black rounded-lg border border-gray-700 flex items-center justify-center overflow-hidden h-48" id="media-preview">
                                     <span class="text-xs text-gray-500">Pré-visualização</span>
@@ -209,7 +203,6 @@
                             </div>
                         </div>
 
-                        <!-- Campos Texto -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Categoria</label>
@@ -234,7 +227,6 @@
                             <textarea id="edit-message" class="input-dark h-24 resize-none"></textarea>
                         </div>
 
-                        <!-- Agendamento -->
                         <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-600">
                             <h4 class="text-xs font-bold text-yellow-500 uppercase mb-3 flex items-center">
                                 <i class="far fa-clock mr-2"></i> Agendamento & Tempo
@@ -249,19 +241,18 @@
                                     <input type="datetime-local" id="edit-endDate" class="input-dark text-xs">
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] text-gray-400 mb-1">Duração (segundos)</label>
+                                    <label class="block text-[10px] text-gray-400 mb-1">Duração (seg)</label>
                                     <input type="number" id="edit-duration" class="input-dark text-xs" value="10">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Salvar -->
                         <div class="pt-2">
                             <button onclick="saveSlideLocal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg shadow-lg transition flex items-center justify-center gap-2 text-lg">
-                                <i class="fas fa-save"></i> CONFIRMAR MUDANÇAS NESTE SLIDE
+                                <i class="fas fa-save"></i> CONFIRMAR MUDANÇAS
                             </button>
                             <p class="text-center text-[10px] text-gray-500 mt-2">
-                                <i class="fas fa-info-circle"></i> Após confirmar, clique em <strong>PUBLICAR NA TV</strong> no topo da página para atualizar o sistema.
+                                <i class="fas fa-info-circle"></i> Depois clique em <strong>PUBLICAR NA TV</strong> no topo da página.
                             </p>
                         </div>
 
@@ -272,25 +263,28 @@
     </div>
 
     <script>
-        // --- CONFIGURAÇÃO E DADOS ---
+        // === DIAGNÓSTICO DE AMBIENTE ===
+        if (window.location.protocol === 'file:') {
+            document.getElementById('local-warning').classList.remove('hidden');
+            const user = "PRafaelSenai"; // Ajuste se necessário
+            const repo = "senaicast";
+            const link = `https://${user.toLowerCase()}.github.io/${repo}/admin.html`;
+            const linkEl = document.getElementById('online-link');
+            linkEl.innerText = link;
+            linkEl.innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
+        }
+
         let GH_CONFIG = { user: '', repo: '', token: '' };
-        
         let DATA = { 
-            // Valores Padrão
-            primaryColor: "#b91c1c", 
-            accentColor: "#facc15", 
-            zoom: "1.0",
-            separatorColor: "#000000", 
-            separatorSpacing: "2",
+            primaryColor: "#b91c1c", accentColor: "#facc15", zoom: "1.0",
+            separatorColor: "#000000", separatorSpacing: "2",
             schoolName: "Orlando Laviero Ferraiuolo",
-            tickerText: "Bem-vindo ao SENAI | Inscrições Abertas",
+            tickerText: "Bem-vindo ao SENAI",
             slides: [] 
         };
-        
         let currentSlideId = null;
-        let fileSHA = null; // Necessário para salvar no GitHub
+        let fileSHA = null;
 
-        // --- INICIALIZAÇÃO ---
         window.onload = () => {
             const stored = localStorage.getItem('gh_config');
             if (stored) {
@@ -308,18 +302,15 @@
         };
 
         function setupListeners() {
-            // Sincroniza inputs de cor
             ['conf-primary', 'conf-accent'].forEach(id => {
                 const el = document.getElementById(id);
                 const txt = document.getElementById(id + '-text');
                 el.addEventListener('input', () => txt.value = el.value);
                 txt.value = el.value;
             });
-            // Sincroniza Zoom
             document.getElementById('conf-zoom').addEventListener('input', (e) => {
                 document.getElementById('zoom-val').innerText = Math.round(e.target.value * 100) + '%';
             });
-            // Sincroniza Espaçamento
             const spacingRange = document.getElementById('conf-sep-spacing-range');
             const spacingVal = document.getElementById('spacing-val');
             spacingRange.addEventListener('input', (e) => {
@@ -328,12 +319,14 @@
             });
         }
 
-        // --- AUTENTICAÇÃO ---
         function saveAuth() {
             const user = document.getElementById('gh-user').value.trim();
             const repo = document.getElementById('gh-repo').value.trim();
-            const token = document.getElementById('gh-token').value.trim();
+            let token = document.getElementById('gh-token').value.trim();
             
+            // Remove espaços invisíveis que podem vir no copy-paste
+            token = token.replace(/[\u200B-\u200D\uFEFF]/g, '');
+
             if(!user || !repo || !token) return Swal.fire('Erro', 'Preencha todos os campos', 'warning');
             
             GH_CONFIG = { user, repo, token };
@@ -342,16 +335,17 @@
         }
 
         function logout() {
-            if(confirm('Tem certeza que deseja desconectar?')) {
+            if(confirm('Desconectar?')) {
                 localStorage.removeItem('gh_config');
                 location.reload();
             }
         }
 
-        // --- API GITHUB (CARREGAR E SALVAR) ---
         async function loadDataFromGit() {
-            const url = `https://api.github.com/repos/${GH_CONFIG.user}/${GH_CONFIG.repo}/contents/data.json`;
-            Swal.fire({title: 'Carregando configurações...', didOpen: () => Swal.showLoading()});
+            // Adiciona timestamp para evitar cache
+            const url = `https://api.github.com/repos/${GH_CONFIG.user}/${GH_CONFIG.repo}/contents/data.json?t=${Date.now()}`;
+            
+            Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
             
             try {
                 const res = await fetch(url, {
@@ -363,23 +357,23 @@
                 });
                 
                 if (res.status === 404) {
-                    Swal.fire('Bem-vindo', 'Primeiro acesso detectado. Um novo banco de dados será criado.', 'info');
+                    Swal.fire('Info', 'Arquivo de dados não encontrado. Será criado ao salvar.', 'info');
                     fileSHA = null;
-                    populateUI(); // Usa defaults
-                    renderSlidesList();
-                    return;
+                    populateUI(); renderSlidesList(); return;
                 }
 
-                if (!res.ok) throw new Error('Falha na conexão. Verifique seu Token.');
+                if (!res.ok) {
+                    if(res.status === 401) throw new Error("Token inválido ou expirado.");
+                    throw new Error(`Erro GitHub: ${res.status}`);
+                }
                 
                 const json = await res.json();
                 fileSHA = json.sha; 
                 
-                // Decodifica UTF-8
+                // Decodifica UTF-8 Corretamente
                 const content = new TextDecoder().decode(Uint8Array.from(atob(json.content), c => c.charCodeAt(0)));
                 const loadedData = JSON.parse(content);
                 
-                // Mescla dados carregados com defaults (garante que campos novos não quebrem)
                 DATA = { ...DATA, ...loadedData };
                 
                 populateUI();
@@ -388,33 +382,30 @@
 
             } catch (e) {
                 console.error(e);
-                Swal.fire('Erro de Conexão', e.message, 'error');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Falha na Conexão',
+                    text: e.message === 'Failed to fetch' ? 'Erro de Rede. Verifique sua internet ou se o Token está correto.' : e.message
+                });
             }
         }
 
         async function publishToGit() {
-            // 1. Salva Configurações Globais no objeto DATA
+            // Salva Configs
             DATA.primaryColor = document.getElementById('conf-primary').value;
             DATA.accentColor = document.getElementById('conf-accent').value;
             DATA.zoom = document.getElementById('conf-zoom').value;
-            
             DATA.separatorColor = document.getElementById('conf-sep-color').value;
             DATA.separatorSpacing = document.getElementById('conf-sep-spacing-range').value;
             DATA.tickerText = document.getElementById('conf-ticker').value;
-            
             DATA.schoolName = document.getElementById('conf-school').value;
 
-            // 2. Prepara envio
+            // URL Limpa sem query params para o PUT
             const url = `https://api.github.com/repos/${GH_CONFIG.user}/${GH_CONFIG.repo}/contents/data.json`;
             const contentString = JSON.stringify(DATA, null, 4);
             const contentBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(contentString)));
 
-            Swal.fire({
-                title: 'Publicando...', 
-                text: 'Enviando atualizações para a TV', 
-                allowOutsideClick: false, 
-                didOpen: () => Swal.showLoading()
-            });
+            Swal.fire({title: 'Publicando...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
 
             try {
                 const body = {
@@ -432,39 +423,28 @@
                     body: JSON.stringify(body)
                 });
 
-                if (!res.ok) throw new Error('Erro ao salvar no GitHub.');
+                if (!res.ok) throw new Error(`Erro GitHub: ${res.status}`);
                 
                 const json = await res.json();
-                fileSHA = json.content.sha; // Atualiza SHA
+                fileSHA = json.content.sha; 
                 
-                Swal.fire({
-                    icon: 'success', 
-                    title: 'Publicado!', 
-                    text: 'A TV será atualizada em aproximadamente 1 minuto.',
-                    timer: 3000
-                });
+                Swal.fire('Sucesso!', 'A TV atualizará em ~1 min.', 'success');
 
             } catch (e) {
                 Swal.fire('Erro ao Publicar', e.message, 'error');
             }
         }
 
-        // --- UI E LÓGICA DO EDITOR ---
         function populateUI() {
-            // Preenche os campos da barra lateral
             document.getElementById('conf-primary').value = DATA.primaryColor;
             document.getElementById('conf-primary-text').value = DATA.primaryColor;
-            
             document.getElementById('conf-accent').value = DATA.accentColor;
             document.getElementById('conf-accent-text').value = DATA.accentColor;
-            
             document.getElementById('conf-zoom').value = DATA.zoom;
             document.getElementById('zoom-val').innerText = Math.round(DATA.zoom * 100) + '%';
-            
             document.getElementById('conf-sep-color').value = DATA.separatorColor;
             document.getElementById('conf-sep-spacing-range').value = DATA.separatorSpacing;
             document.getElementById('spacing-val').innerText = DATA.separatorSpacing + 'rem';
-            
             document.getElementById('conf-ticker').value = DATA.tickerText;
             document.getElementById('conf-school').value = DATA.schoolName;
         }
@@ -472,14 +452,12 @@
         function renderSlidesList() {
             const list = document.getElementById('slides-list');
             list.innerHTML = '';
-            
             const now = new Date();
 
             DATA.slides.forEach(s => {
                 const div = document.createElement('div');
                 const isActive = s.id === currentSlideId;
                 
-                // Status (Bolinha)
                 let statusColor = "bg-green-500";
                 const start = s.startDate ? new Date(s.startDate) : null;
                 const end = s.endDate ? new Date(s.endDate) : null;
@@ -510,13 +488,8 @@
 
         function addNewSlide() {
             const id = Date.now();
-            const newSlide = {
-                id, category: 'Aviso', title: 'Novo Slide', message: '', layout: 'default',
-                mediaType: 'image', url: '', duration: 10, startDate: '', endDate: ''
-            };
-            DATA.slides.push(newSlide);
-            loadSlide(id);
-            renderSlidesList();
+            DATA.slides.push({ id, category: 'Aviso', title: 'Novo Slide', message: '', layout: 'default', mediaType: 'image', url: '', duration: 10, startDate: '', endDate: '' });
+            loadSlide(id); renderSlidesList();
         }
 
         function loadSlide(id) {
@@ -527,7 +500,6 @@
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-form').classList.remove('hidden');
 
-            // Preenche campos
             document.getElementById('edit-title').value = s.title;
             document.getElementById('edit-category').value = s.category;
             document.getElementById('edit-message').value = s.message;
@@ -536,13 +508,9 @@
             document.getElementById('edit-startDate').value = s.startDate;
             document.getElementById('edit-endDate').value = s.endDate;
             
-            // URL handling
             const urlField = document.getElementById('edit-url');
-            if(s.url && s.url.startsWith('data:')) {
-                urlField.value = ''; // Base64 escondido
-            } else {
-                urlField.value = s.url;
-            }
+            if(s.url && s.url.startsWith('data:')) urlField.value = '';
+            else urlField.value = s.url;
             
             updatePreview(s.url);
             renderSlidesList();
@@ -552,20 +520,16 @@
             const s = DATA.slides.find(x => x.id === currentSlideId);
             if (!s) return;
 
-            // Validação Data
             const start = document.getElementById('edit-startDate').value;
             const end = document.getElementById('edit-endDate').value;
-            if(start && end && new Date(end) <= new Date(start)) {
-                return Swal.fire('Data Inválida', 'A data de término deve ser DEPOIS do início.', 'warning');
-            }
+            if(start && end && new Date(end) <= new Date(start)) return Swal.fire('Data Inválida', 'Término deve ser DEPOIS do início.', 'warning');
 
             s.title = document.getElementById('edit-title').value;
             s.category = document.getElementById('edit-category').value;
             s.message = document.getElementById('edit-message').value;
             s.layout = document.getElementById('edit-layout').value;
             s.duration = parseInt(document.getElementById('edit-duration').value);
-            s.startDate = start;
-            s.endDate = end;
+            s.startDate = start; s.endDate = end;
             
             const urlInput = document.getElementById('edit-url').value.trim();
             if(urlInput) {
@@ -574,27 +538,19 @@
                 else if(urlInput.match(/\.(mp4|webm)$/)) s.mediaType = 'video';
                 else s.mediaType = 'image';
                 
-                // Youtube Embed Fix
                 if(s.url.includes('watch?v=')) {
                     const vid = s.url.split('v=')[1].split('&')[0];
                     s.url = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}`;
                 }
             }
 
-            Swal.fire({
-                icon: 'success', title: 'Slide Atualizado',
-                text: 'Lembre-se de clicar em "PUBLICAR NA TV" para salvar.',
-                timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'
-            });
+            Swal.fire({ icon: 'success', title: 'Editado', text: 'Clique em PUBLICAR para salvar.', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
             renderSlidesList();
         }
 
         function deleteSlide() {
-            Swal.fire({
-                title: 'Excluir?', text: "Não será possível reverter!", icon: 'warning',
-                showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim, excluir'
-            }).then((result) => {
-                if (result.isConfirmed) {
+            Swal.fire({ title: 'Excluir?', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sim' }).then((r) => {
+                if (r.isConfirmed) {
                     DATA.slides = DATA.slides.filter(x => x.id !== currentSlideId);
                     currentSlideId = null;
                     document.getElementById('editor-form').classList.add('hidden');
@@ -609,9 +565,8 @@
             if (!file) return;
             
             if (file.size > 2.5 * 1024 * 1024) { 
-                Swal.fire('Arquivo Grande', 'O limite é 2.5MB para manter o sistema rápido. Para vídeos maiores, use YouTube.', 'warning');
-                input.value = '';
-                return;
+                Swal.fire('Arquivo Grande', 'Máximo 2.5MB. Para vídeos maiores, use YouTube.', 'warning');
+                input.value = ''; return;
             }
 
             const reader = new FileReader();
