@@ -11,21 +11,19 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: white; overflow: hidden; font-size: calc(1rem * var(--text-scale)); }
         #tv-container { width: 100vw; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; background: #000; }
         
-        /* Cabeçalho */
         .header-bar { background-color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 30; height: 80px; }
         .logo-img { height: 50px; object-fit: contain; }
         .school-name { color: #333; font-size: 1.25rem; font-weight: 700; line-height: 1.1; border-left: 3px solid var(--primary-color); padding-left: 1rem; display: flex; align-items: center; height: 40px; }
         
-        /* Conteúdo */
         .content-area { display: grid; grid-template-columns: 35% 65%; overflow: hidden; position: relative; }
         .content-area.layout-fullscreen { grid-template-columns: 1fr; }
         .content-area.layout-fullscreen .sidebar { display: none; }
         .sidebar { background: linear-gradient(135deg, var(--primary-color) 0%, #7f1d1d 100%); padding: 3rem; display: flex; flex-direction: column; justify-content: center; box-shadow: 5px 0 15px rgba(0,0,0,0.3); z-index: 10; }
+        
         .media-viewer { position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
         .media-viewer img, .media-viewer video, .media-viewer iframe { width: 100%; height: 100%; object-fit: cover; border: none; }
         .media-viewer iframe { object-fit: contain; }
 
-        /* Rodapé */
         .news-ticker { background-color: var(--accent-color); color: #000; height: 60px; display: grid; grid-template-columns: auto 1fr; align-items: stretch; overflow: hidden; font-weight: bold; font-size: 1.5rem; white-space: nowrap; z-index: 20; }
         .ticker-label { background-color: var(--primary-color); color: white; padding: 0 2rem; display: flex; align-items: center; justify-content: center; font-weight: 800; letter-spacing: 1px; box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 21; }
         .ticker-track { overflow: hidden; display: flex; align-items: center; position: relative; }
@@ -33,12 +31,15 @@
         .ticker-separator { color: var(--separator-color); margin: 0 var(--separator-spacing); font-size: 1.2em; vertical-align: middle; line-height: 0; position: relative; top: -2px; }
         @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
         
-        /* Status de Carregamento */
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: white; display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s; }
+        
+        /* Aviso de Demo */
+        #demo-banner { position: fixed; top: 0; left: 0; width: 100%; background: #f59e0b; color: black; text-align: center; font-size: 12px; font-weight: bold; padding: 2px; z-index: 10000; display: none; }
     </style>
 </head>
 <body>
-    <div id="loading-overlay"><div><i class="fas fa-circle-notch fa-spin text-4xl mb-4"></i><br>Carregando Painel...</div></div>
+    <div id="loading-overlay"><div><i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-yellow-500"></i><br>Iniciando...</div></div>
+    <div id="demo-banner">⚠️ MODO DEMONSTRAÇÃO - FIREBASE NÃO CONFIGURADO ⚠️</div>
 
     <div id="tv-container" class="opacity-0 transition-opacity duration-1000">
         <div class="header-bar">
@@ -71,63 +72,64 @@
         </div>
     </div>
 
-    <script>
-        // Configuração Padrão (Fallback caso não consiga ler o arquivo online)
-        const DEFAULT_CONFIG = {
-            "primaryColor": "#b91c1c",
-            "accentColor": "#facc15",
-            "zoom": "1.0",
-            "separatorColor": "#000000",
-            "separatorSpacing": "2",
-            "schoolName": "Orlando Laviero Ferraiuolo",
-            "tickerText": "Bem-vindo ao SENAI | Inscrições Abertas | Segurança em primeiro lugar",
-            "slides": [
-                {
-                    "id": 1,
-                    "category": "Status",
-                    "title": "Aguardando Conexão",
-                    "message": "Tentando conectar ao banco de dados...",
-                    "layout": "default",
-                    "mediaType": "image",
-                    "url": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1920&h=1080&fit=crop",
-                    "duration": 5
-                }
-            ]
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+        // CONFIGURAÇÃO DO USUÁRIO
+        const firebaseConfig = {
+            apiKey: "AIzaSyCDRfhHT3zx6KRS6UIWAMcUfVos0IqdpHM",
+            authDomain: "senaicast-edc28.firebaseapp.com",
+            projectId: "senaicast-edc28",
+            storageBucket: "senaicast-edc28.firebasestorage.app",
+            messagingSenderId: "341389384326",
+            appId: "1:341389384326:web:65706f1d52a038d4350f07",
+            measurementId: "G-MQ9C27TBT1"
         };
 
-        let SYSTEM_CONFIG = {};
+        let SYSTEM_CONFIG = {
+            primaryColor: "#b91c1c", accentColor: "#facc15", zoom: "1.0",
+            separatorColor: "#000000", separatorSpacing: "2",
+            schoolName: "Orlando Laviero Ferraiuolo",
+            tickerText: "Bem-vindo ao SENAI | Aguardando conexão...",
+            slides: []
+        };
+        
         let currentSlideIndex = 0;
         let slideTimer = null;
 
-        async function loadData() {
-            try {
-                // Tenta carregar do arquivo (funciona no GitHub/Servidor)
-                // Usamos location.origin para tentar montar url absoluta se possível, mas fetch relativo costuma funcionar em servidor
-                const response = await fetch('data.json?t=' + Date.now());
-                if (!response.ok) throw new Error('Falha ao carregar dados ou arquivo inexistente');
-                
-                const newData = await response.json();
-                
-                // Se houve mudança nos dados, reinicia a exibição
-                if (JSON.stringify(newData) !== JSON.stringify(SYSTEM_CONFIG)) {
-                    SYSTEM_CONFIG = newData;
-                    applyGlobalSettings();
-                    hideLoading();
-                    // Reinicia o loop se for a primeira vez
-                    if (!slideTimer) initTV(); 
-                }
-            } catch (error) {
-                console.warn("Modo Offline/Fallback ativado:", error);
-                
-                // Se falhar (ex: rodando local ou sem o arquivo), usa o padrão
-                // Só aplica o padrão se a configuração estiver vazia (primeira carga)
-                if (Object.keys(SYSTEM_CONFIG).length === 0) {
-                    SYSTEM_CONFIG = DEFAULT_CONFIG;
+        // INICIALIZAÇÃO
+        try {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            
+            console.log("Tentando conectar ao Firebase...");
+            
+            onSnapshot(doc(db, "senaicast", "config"), (doc) => {
+                if (doc.exists()) {
+                    SYSTEM_CONFIG = doc.data();
+                    console.log("Dados recebidos!");
                     applyGlobalSettings();
                     hideLoading();
                     if (!slideTimer) initTV();
+                } else {
+                    console.log("Aguardando dados (Documento ainda não criado pelo Admin)...");
+                    hideLoading();
+                    // Se não tiver dados, inicia um loop de espera visual
+                    if (!slideTimer) renderPlaceholder();
                 }
-            }
+            }, (error) => {
+                console.error("Erro Firebase:", error);
+                // Se der erro de permissão, é provável que as regras do Firestore não estejam públicas ou em modo de teste
+                if (error.code === 'permission-denied') {
+                    alert("Erro de Permissão: O banco de dados foi criado em 'Modo Bloqueado'? Verifique as Regras no console do Firebase.");
+                }
+                hideLoading();
+            });
+        } catch (e) {
+            console.error("Falha Crítica:", e);
+            hideLoading();
         }
 
         function hideLoading() {
@@ -141,8 +143,8 @@
 
         function applyGlobalSettings() {
             const root = document.documentElement;
-            root.style.setProperty('--primary-color', SYSTEM_CONFIG.primaryColor || DEFAULT_CONFIG.primaryColor);
-            root.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor || DEFAULT_CONFIG.accentColor);
+            root.style.setProperty('--primary-color', SYSTEM_CONFIG.primaryColor || '#b91c1c');
+            root.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor || '#facc15');
             root.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom || "1.0");
             root.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor || '#000000');
             root.style.setProperty('--separator-spacing', (SYSTEM_CONFIG.separatorSpacing || 2) + 'rem');
@@ -154,23 +156,21 @@
 
         function initTV() {
             const now = new Date();
-            if (!SYSTEM_CONFIG.slides) return;
+            let activeSlides = SYSTEM_CONFIG.slides || [];
 
-            const activeSlides = SYSTEM_CONFIG.slides.filter(s => {
+            // Filtro de Data
+            activeSlides = activeSlides.filter(s => {
                 const start = s.startDate ? new Date(s.startDate) : null;
                 const end = s.endDate ? new Date(s.endDate) : null;
-                
-                // Validação de datas
                 if (start && !isNaN(start.getTime()) && now < start) return false;
                 if (end && !isNaN(end.getTime()) && now > end) return false;
-                
                 return true;
             });
 
             if (activeSlides.length === 0) {
                 renderPlaceholder();
                 clearTimeout(slideTimer);
-                slideTimer = setTimeout(initTV, 10000); // Tenta de novo em 10s
+                slideTimer = setTimeout(initTV, 5000);
                 return;
             }
 
@@ -180,7 +180,7 @@
 
             clearTimeout(slideTimer);
             let duration = (slide.duration || 10) * 1000;
-            if (slide.mediaType === 'video') duration += 5000; // Segurança para videos
+            if (slide.mediaType === 'video') duration += 5000;
 
             slideTimer = setTimeout(() => {
                 currentSlideIndex++;
@@ -205,34 +205,27 @@
                 el = document.createElement('video');
                 el.src = slide.url; el.autoplay = true; el.muted = true;
                 el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
-                el.onerror = () => { console.log("Erro video, pulando"); clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
             } else if (slide.mediaType === 'iframe') {
                 el = document.createElement('iframe');
                 el.src = slide.url; el.allow = "autoplay";
             } else {
                 el = document.createElement('img');
                 el.src = slide.url;
-                el.onerror = () => { el.src = 'https://via.placeholder.com/1920x1080?text=Erro+Imagem'; };
             }
             container.appendChild(el);
         }
 
         function renderPlaceholder() {
             document.getElementById('slide-title').innerText = "Aguardando";
-            document.getElementById('slide-message').innerText = "Nenhum conteúdo programado para este horário.";
+            document.getElementById('slide-message').innerText = "Nenhum conteúdo no ar.";
             document.getElementById('media-container').innerHTML = '';
         }
 
-        // Relógio
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock-time').innerText = now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             document.getElementById('clock-date').innerText = now.toLocaleDateString('pt-BR', {weekday: 'long', day: 'numeric', month: 'long'});
         }, 1000);
-
-        // Inicia e verifica atualizações a cada 30 segundos
-        loadData();
-        setInterval(loadData, 30000); 
     </script>
 </body>
 </html>
