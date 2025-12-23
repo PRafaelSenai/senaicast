@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Firebase - Painel SENAI</title>
+    <title>Admin - Painel SENAI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Tenta carregar SweetAlert (Avisos bonitos) -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
@@ -16,14 +14,11 @@
         .input-dark { width: 100%; background-color: #374151; border: 1px solid #4b5563; color: white; padding: 0.5rem; border-radius: 0.375rem; font-size: 0.875rem; }
         .input-dark:focus { border-color: #facc15; outline: none; }
         .slide-card.active { border-left: 4px solid #facc15; background-color: #374151; }
-        
-        /* Modal Fallback (Caso o SweetAlert falhe) */
-        #fallback-modal { display: none; }
-        #fallback-modal.open { display: flex; }
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
 
+    <!-- CABEÇALHO COM NOME CORRIGIDO -->
     <header class="bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-6 shrink-0 z-20">
         <div class="flex items-center gap-3">
             <div class="bg-yellow-500 text-black w-8 h-8 rounded flex items-center justify-center font-bold"><i class="fas fa-fire"></i></div>
@@ -104,23 +99,18 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-        // --- SISTEMA DE BLINDAGEM CONTRA ERROS ---
+        // --- SISTEMA DE BLINDAGEM CONTRA ERROS DE UI ---
         if (typeof Swal === 'undefined') {
-            console.warn("SweetAlert não carregou. Usando fallback.");
             window.Swal = {
                 fire: async (opts) => {
-                    if(opts.didOpen) opts.didOpen(); // Simula loading
-                    if(opts.title === 'Carregando...') return; // Ignora loading visual no fallback simples
-                    
-                    const confirmed = confirm((opts.title || '') + "\n\n" + (opts.text || ''));
+                    const confirmed = confirm((opts.title || '') + "\n" + (opts.text || ''));
                     return { isConfirmed: confirmed };
                 },
-                showLoading: () => {},
-                close: () => {}
+                showLoading: () => {}, close: () => {}
             };
         }
 
-        // CONFIGURAÇÃO DO USUÁRIO
+        // --- CONFIGURAÇÃO DO FIREBASE (SUAS CHAVES) ---
         const firebaseConfig = {
             apiKey: "AIzaSyCDRfhHT3zx6KRS6UIWAMcUfVos0IqdpHM",
             authDomain: "senaicast-edc28.firebaseapp.com",
@@ -137,11 +127,46 @@
             db = getFirestore(app);
         } catch(e) {
             console.error("Erro init:", e);
-            alert("Erro crítico ao iniciar Firebase. Verifique console.");
+            alert("Erro crítico ao iniciar Firebase. Verifique o console.");
         }
 
         window.DATA = { slides: [], primaryColor: "#b91c1c", accentColor: "#facc15" };
         window.currentSlideId = null;
+
+        // --- FUNÇÕES ---
+
+        // Função de Limpeza de Dados (Evita erro "Invalid nested entity")
+        function cleanPayload(data) {
+            // Clona o objeto para não alterar a referência original
+            const clean = JSON.parse(JSON.stringify(data));
+            
+            // Garante que slides é um array
+            if (!Array.isArray(clean.slides)) clean.slides = [];
+
+            // Limpa cada slide
+            clean.slides = clean.slides.map(s => {
+                return {
+                    id: s.id || Date.now(),
+                    title: s.title || "",
+                    category: s.category || "",
+                    message: s.message || "",
+                    layout: s.layout || "default",
+                    mediaType: s.mediaType || "image",
+                    url: s.url || "",
+                    // Converte duração para número, se falhar vira 10
+                    duration: (parseInt(s.duration) || 10),
+                    startDate: s.startDate || "",
+                    endDate: s.endDate || ""
+                };
+            });
+
+            // Limpa configs globais
+            clean.primaryColor = clean.primaryColor || "#b91c1c";
+            clean.accentColor = clean.accentColor || "#facc15";
+            clean.separatorColor = clean.separatorColor || "#000000";
+            
+            return clean;
+        }
 
         window.loadData = async function() {
             Swal.fire({title: 'Carregando...', didOpen: () => Swal.showLoading()});
@@ -150,6 +175,8 @@
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     window.DATA = { ...window.DATA, ...docSnap.data() };
+                    // Força limpeza ao carregar também
+                    window.DATA.slides.forEach(s => { if(!s.duration) s.duration = 10; });
                     populateUI();
                     renderSlidesList();
                     Swal.close();
@@ -166,7 +193,7 @@
         };
 
         window.saveToFirebase = async function() {
-            // Coleta dados
+            // 1. Coleta dados da interface
             window.DATA.primaryColor = document.getElementById('conf-primary').value;
             window.DATA.accentColor = document.getElementById('conf-accent').value;
             window.DATA.zoom = document.getElementById('conf-zoom').value;
@@ -174,13 +201,17 @@
             window.DATA.tickerText = document.getElementById('conf-ticker').value;
             window.DATA.schoolName = document.getElementById('conf-school').value;
 
+            // 2. Limpeza dos dados antes de enviar
+            const safeData = cleanPayload(window.DATA);
+
             Swal.fire({title: 'Salvando...', didOpen: () => Swal.showLoading()});
             try {
-                await setDoc(doc(db, "senaicast", "config"), window.DATA);
-                Swal.fire('Sucesso!', 'Dados atualizados na TV em tempo real.', 'success');
+                // Salva os dados limpos
+                await setDoc(doc(db, "senaicast", "config"), safeData);
+                Swal.fire('Sucesso!', 'Dados salvos e limpos.', 'success');
             } catch (error) {
-                console.error(error);
-                Swal.fire('Erro', error.message, 'error');
+                console.error("Erro detalhado:", error);
+                Swal.fire('Erro', 'Não foi possível salvar: ' + error.message, 'error');
             }
         };
 
@@ -220,11 +251,11 @@
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-form').classList.remove('hidden');
             
-            document.getElementById('edit-title').value = s.title;
-            document.getElementById('edit-category').value = s.category;
-            document.getElementById('edit-message').value = s.message;
-            document.getElementById('edit-layout').value = s.layout;
-            document.getElementById('edit-duration').value = s.duration;
+            document.getElementById('edit-title').value = s.title || "";
+            document.getElementById('edit-category').value = s.category || "";
+            document.getElementById('edit-message').value = s.message || "";
+            document.getElementById('edit-layout').value = s.layout || "default";
+            document.getElementById('edit-duration').value = s.duration || 10;
             document.getElementById('edit-startDate').value = s.startDate || '';
             document.getElementById('edit-endDate').value = s.endDate || '';
             document.getElementById('edit-url').value = (s.url && !s.url.startsWith('data:')) ? s.url : '';
@@ -240,7 +271,12 @@
             s.category = document.getElementById('edit-category').value;
             s.message = document.getElementById('edit-message').value;
             s.layout = document.getElementById('edit-layout').value;
-            s.duration = parseInt(document.getElementById('edit-duration').value);
+            
+            // Converte para Inteiro na hora, evita string vazia ou NaN
+            let dur = parseInt(document.getElementById('edit-duration').value);
+            if(isNaN(dur) || dur < 1) dur = 10;
+            s.duration = dur;
+
             s.startDate = document.getElementById('edit-startDate').value;
             s.endDate = document.getElementById('edit-endDate').value;
             
