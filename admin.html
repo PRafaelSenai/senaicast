@@ -19,7 +19,7 @@
         .loading-overlay.active { display: flex; }
         .senai-header { background-color: var(--senai-red, #E30613); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         .icon-option { cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; }
-        .icon-option:hover { background-color: #4b5563; }
+        .icon-option.hover { background-color: #4b5563; }
         .icon-option.selected { background-color: #E30613; color: white; }
     </style>
 </head>
@@ -108,7 +108,7 @@
                             <div class="border-2 border-dashed border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-gray-700/50 cursor-pointer relative group h-48">
                                 <input type="file" id="file-upload" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleSupabaseUpload(this)">
                                 <i class="fas fa-cloud-upload-alt text-4xl text-gray-500 mb-2"></i><span class="text-sm font-medium text-gray-300">Upload do PC</span>
-                                <span class="text-[10px] text-gray-500 mt-1">Imagens e Vídeos (Rec: 15MB)</span>
+                                <span class="text-[10px] text-gray-500 mt-1">Imagens (1920x1080px) • Vídeos (Max 15MB)</span>
                             </div>
                             <div class="bg-black rounded-lg border border-gray-700 flex items-center justify-center overflow-hidden h-48" id="media-preview"><span class="text-xs text-gray-500">Preview</span></div>
                         </div>
@@ -235,9 +235,11 @@
             DATA.separatorColor = document.getElementById('conf-sep-color').value;
             DATA.separatorSize = document.getElementById('conf-sep-size').value;
             DATA.separatorSpacing = document.getElementById('conf-sep-spacing').value;
+            
             DATA.tickerBg = document.getElementById('conf-ticker-bg').value;
             DATA.tickerColor = document.getElementById('conf-ticker-text').value;
             DATA.tickerSpeed = document.getElementById('conf-ticker-speed').value;
+
             DATA.tickerText = document.getElementById('conf-ticker').value;
             DATA.schoolName = document.getElementById('conf-school').value;
 
@@ -274,6 +276,7 @@
             document.getElementById('conf-ticker-bg').value = DATA.tickerBg || '#0047B6';
             document.getElementById('conf-ticker-text').value = DATA.tickerColor || '#ffffff';
             document.getElementById('conf-ticker-speed').value = DATA.tickerSpeed || 30;
+
             document.getElementById('conf-ticker').value = DATA.tickerText || '';
             document.getElementById('conf-school').value = DATA.schoolName || '';
             updateSchoolNameDisplay(DATA.schoolName);
