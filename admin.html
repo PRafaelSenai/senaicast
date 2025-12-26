@@ -8,6 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
@@ -21,25 +22,56 @@
         .icon-option { cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; }
         .icon-option.hover { background-color: #4b5563; }
         .icon-option.selected { background-color: #E30613; color: white; }
+
+        /* Estilos para Mobile Tabs */
+        .mobile-tab-btn { flex: 1; padding: 1rem; text-align: center; background: #1f2937; color: #9ca3af; border-top: 2px solid transparent; }
+        .mobile-tab-btn.active { color: white; border-top-color: #E30613; background: #111827; }
+        .mobile-view { display: none; height: 100%; overflow-y: auto; }
+        .mobile-view.active { display: block; }
+        
+        /* Desktop */
+        @media (min-width: 768px) {
+            .mobile-only-nav { display: none; }
+            .desktop-layout { display: flex !important; }
+            .mobile-view { display: block !important; } 
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
 
-    <header class="senai-header h-20 flex items-center justify-between px-6 shrink-0 z-20">
-        <div class="flex items-center gap-3">
-            <div class="bg-white text-red-600 w-8 h-8 rounded flex items-center justify-center font-bold shadow"><i class="fas fa-fire"></i></div>
-            <h1 class="text-lg font-bold tracking-wide">Gerenciador Senaicast</h1>
-        </div>
+    <!-- CABEÇALHO RESTAURADO COM LOGO E NOME -->
+    <header class="senai-header h-20 flex items-center justify-between px-4 md:px-6 shrink-0 z-20">
         <div class="flex items-center gap-4">
-            <button onclick="saveToSupabase()" class="bg-white text-red-600 hover:bg-gray-100 px-6 py-2 rounded font-bold shadow-lg flex items-center gap-2 transform hover:scale-105 transition">
-                <i class="fas fa-save"></i> SALVAR NA TV
+            <!-- Logo SENAI -->
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/SENAI_S%C3%A3o_Paulo_logo.png/1200px-SENAI_S%C3%A3o_Paulo_logo.png" alt="Logo SENAI" class="h-8 md:h-10 bg-white px-2 py-1 rounded shadow-sm object-contain">
+            
+            <div class="h-8 w-px bg-white/30 hidden md:block"></div>
+            
+            <div class="flex flex-col justify-center">
+                <h1 class="text-sm md:text-lg font-bold tracking-wide text-white leading-tight">Gerenciador Senaicast</h1>
+                <!-- Nome da Escola Dinâmico -->
+                <span id="header-school-name" class="text-[10px] md:text-xs font-medium text-white/90 uppercase tracking-wide truncate max-w-[150px] md:max-w-xs">Orlando Laviero Ferraiuolo</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="saveToSupabase()" class="bg-white text-[#E30613] hover:bg-gray-100 px-3 md:px-6 py-1.5 md:py-2 rounded font-bold shadow-lg flex items-center gap-2 transform hover:scale-105 transition border border-white text-xs md:text-sm">
+                <i class="fas fa-save"></i> <span class="hidden md:inline">SALVAR NA TV</span><span class="md:hidden">SALVAR</span>
             </button>
         </div>
     </header>
 
-    <div class="flex flex-1 overflow-hidden flex-col md:flex-row">
-        <!-- Sidebar Config (Responsiva) -->
-        <aside class="w-full md:w-72 bg-gray-800 border-r border-gray-700 overflow-y-auto flex flex-col custom-scrollbar p-5 space-y-5 hidden md:flex">
+    <!-- NAVEGAÇÃO MOBILE (Só aparece em telas pequenas) -->
+    <div class="md:hidden flex border-b border-gray-700 bg-gray-800 mobile-only-nav shrink-0">
+        <button onclick="switchTab('config')" class="mobile-tab-btn active" id="tab-btn-config"><i class="fas fa-cog mb-1 block"></i> Config</button>
+        <button onclick="switchTab('slides')" class="mobile-tab-btn" id="tab-btn-slides"><i class="fas fa-list mb-1 block"></i> Slides</button>
+        <button onclick="switchTab('editor')" class="mobile-tab-btn" id="tab-btn-editor"><i class="fas fa-edit mb-1 block"></i> Editor</button>
+    </div>
+
+    <!-- CORPO PRINCIPAL -->
+    <div class="flex-1 overflow-hidden flex flex-col md:flex-row relative">
+        
+        <!-- 1. CONFIGURAÇÕES (Sidebar Esquerda) -->
+        <aside id="view-config" class="mobile-view active w-full md:w-72 bg-gray-800 border-r border-gray-700 custom-scrollbar p-5 space-y-5">
             <h3 class="text-xs font-bold text-yellow-500 uppercase border-b border-gray-700 pb-2">Aparência</h3>
             <div><label class="text-xs text-gray-300 block mb-1">Cores</label><div class="flex gap-2"><input type="color" id="conf-primary" class="h-8 flex-1 rounded cursor-pointer"><input type="color" id="conf-accent" class="h-8 flex-1 rounded cursor-pointer"></div></div>
             <div><label class="text-xs text-gray-300 block mb-1">Zoom Texto</label><input type="range" id="conf-zoom" min="0.8" max="1.5" step="0.1" class="w-full h-2 bg-gray-600 rounded-lg"></div>
@@ -51,17 +83,11 @@
                 <div class="mb-2"><label class="text-xs text-gray-300 block mb-1">Cor</label><input type="color" id="conf-sep-color" class="h-8 w-full rounded cursor-pointer"></div>
                 <div class="mb-2">
                     <label class="text-xs text-gray-300 block mb-1">Tamanho</label>
-                    <div class="flex items-center gap-2">
-                        <input type="range" id="conf-sep-size" min="0.5" max="3" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500">
-                        <span id="size-val" class="text-xs text-gray-400 w-10 text-right">1.5rem</span>
-                    </div>
+                    <div class="flex items-center gap-2"><input type="range" id="conf-sep-size" min="0.5" max="3" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500"><span id="size-val" class="text-xs text-gray-400 w-10 text-right">1.5rem</span></div>
                 </div>
                 <div>
                     <label class="text-xs text-gray-300 block mb-1">Espaçamento</label>
-                    <div class="flex items-center gap-2">
-                        <input type="range" id="conf-sep-spacing" min="0.1" max="5" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500">
-                        <span id="spacing-val" class="text-xs text-gray-400 w-10 text-right">0.5rem</span>
-                    </div>
+                    <div class="flex items-center gap-2"><input type="range" id="conf-sep-spacing" min="0.1" max="5" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500"><span id="spacing-val" class="text-xs text-gray-400 w-10 text-right">0.5rem</span></div>
                 </div>
             </div>
 
@@ -81,25 +107,32 @@
             </div>
             
             <h3 class="text-xs font-bold text-yellow-500 uppercase border-b border-gray-700 pb-2 mt-4">Escola</h3>
-            <div><label class="text-xs text-gray-300 block mb-1">Nome da Escola</label><textarea id="conf-school" class="input-dark h-12 text-xs"></textarea></div>
+            <div>
+                <label class="text-xs text-gray-300 block mb-1">Nome da Escola</label>
+                <textarea id="conf-school" class="input-dark h-12 text-xs" oninput="updateSchoolNameDisplay(this.value)"></textarea>
+            </div>
+            
+            <!-- Espaço extra para scroll no mobile -->
+            <div class="h-20 md:hidden"></div>
         </aside>
 
-        <!-- Sidebar Slides -->
-        <aside class="w-full md:w-80 bg-gray-900 border-r border-gray-700 flex flex-col">
+        <!-- 2. LISTA DE SLIDES (Sidebar Meio) -->
+        <aside id="view-slides" class="mobile-view w-full md:w-80 bg-gray-900 border-r border-gray-700 flex flex-col">
             <div class="p-4 border-b border-gray-700 bg-gray-800 flex justify-between">
                 <h3 class="font-bold text-sm text-white">Slides</h3>
                 <button onclick="addNewSlide()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded font-bold">+ NOVO</button>
             </div>
-            <div id="slides-list" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
+            <div id="slides-list" class="flex-1 overflow-y-auto p-2 space-y-2 pb-20 md:pb-2"></div>
         </aside>
 
-        <!-- Editor -->
-        <main class="flex-1 bg-black relative">
-            <div id="no-selection" class="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
-                <i class="fas fa-hand-pointer text-5xl mb-4 opacity-50"></i><p>Selecione um slide</p>
+        <!-- 3. EDITOR (Direita) -->
+        <main id="view-editor" class="mobile-view w-full flex-1 bg-black relative">
+            <div id="no-selection" class="absolute inset-0 flex flex-col items-center justify-center text-gray-600 p-4 text-center">
+                <i class="fas fa-hand-pointer text-5xl mb-4 opacity-50"></i><p>Selecione um slide na aba "Slides" para editar</p>
+                <button onclick="switchTab('slides')" class="mt-4 bg-gray-700 px-4 py-2 rounded md:hidden text-sm">Ir para Lista</button>
             </div>
             <div id="editor-form" class="hidden absolute inset-0 overflow-y-auto p-4 md:p-8 bg-gray-900">
-                <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-xl space-y-6 relative">
+                <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-xl space-y-6 relative mb-20 md:mb-0">
                     <div id="upload-overlay" class="loading-overlay rounded-xl"><i class="fas fa-circle-notch fa-spin text-4xl text-white mb-2"></i><span class="font-bold text-sm">Enviando...</span></div>
                     
                     <div>
@@ -142,7 +175,7 @@
 
                     <div class="flex justify-between pt-2">
                         <button onclick="deleteSlide()" class="text-red-400 text-sm font-bold px-4">Excluir</button>
-                        <button onclick="saveSlideLocal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg">CONFIRMAR RASCUNHO</button>
+                        <button onclick="saveSlideLocal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg w-full md:w-auto">CONFIRMAR RASCUNHO</button>
                     </div>
                 </div>
             </div>
@@ -157,6 +190,14 @@
         let DATA = { slides: [], primaryColor: "#E30613", accentColor: "#0047B6" };
         let currentSlideId = null;
         let configId = null;
+
+        // Controle de Abas Mobile
+        function switchTab(tab) {
+            document.querySelectorAll('.mobile-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.mobile-view').forEach(v => v.classList.remove('active'));
+            document.getElementById('tab-btn-' + tab).classList.add('active');
+            document.getElementById('view-' + tab).classList.add('active');
+        }
 
         const AVAILABLE_ICONS = [
             'fas fa-bullhorn', 'fas fa-info-circle', 'fas fa-exclamation-triangle',
@@ -203,7 +244,7 @@
         
         function updateSchoolNameDisplay(val) {
             const el = document.getElementById('header-school-name');
-            if(el) el.innerText = val || 'SENAI';
+            if(el) el.innerText = val || 'Orlando Laviero Ferraiuolo';
         }
 
         async function loadData() {
@@ -231,15 +272,12 @@
             DATA.primaryColor = document.getElementById('conf-primary').value;
             DATA.accentColor = document.getElementById('conf-accent').value;
             DATA.zoom = document.getElementById('conf-zoom').value;
-            
             DATA.separatorColor = document.getElementById('conf-sep-color').value;
             DATA.separatorSize = document.getElementById('conf-sep-size').value;
             DATA.separatorSpacing = document.getElementById('conf-sep-spacing').value;
-            
             DATA.tickerBg = document.getElementById('conf-ticker-bg').value;
             DATA.tickerColor = document.getElementById('conf-ticker-text').value;
             DATA.tickerSpeed = document.getElementById('conf-ticker-speed').value;
-
             DATA.tickerText = document.getElementById('conf-ticker').value;
             DATA.schoolName = document.getElementById('conf-school').value;
 
@@ -267,7 +305,6 @@
             document.getElementById('conf-primary').value = DATA.primaryColor || '#E30613';
             document.getElementById('conf-accent').value = DATA.accentColor || '#0047B6';
             document.getElementById('conf-zoom').value = DATA.zoom || 1.0;
-            
             document.getElementById('conf-sep-color').value = DATA.separatorColor || '#ffffff';
             document.getElementById('conf-sep-size').value = DATA.separatorSize || 1.5;
             document.getElementById('size-val').innerText = (DATA.separatorSize || 1.5) + 'rem';
@@ -276,7 +313,6 @@
             document.getElementById('conf-ticker-bg').value = DATA.tickerBg || '#0047B6';
             document.getElementById('conf-ticker-text').value = DATA.tickerColor || '#ffffff';
             document.getElementById('conf-ticker-speed').value = DATA.tickerSpeed || 30;
-
             document.getElementById('conf-ticker').value = DATA.tickerText || '';
             document.getElementById('conf-school').value = DATA.schoolName || '';
             updateSchoolNameDisplay(DATA.schoolName);
@@ -287,7 +323,7 @@
             (DATA.slides || []).forEach(s => {
                 const div = document.createElement('div');
                 div.className = `slide-card p-3 rounded cursor-pointer border border-transparent hover:bg-gray-800 mb-2 ${s.id === currentSlideId ? 'active' : 'bg-gray-800/50'}`;
-                div.onclick = () => loadSlide(s.id);
+                div.onclick = () => { loadSlide(s.id); if(window.innerWidth < 768) switchTab('editor'); };
                 const iconHtml = s.categoryIcon ? `<i class="${s.categoryIcon} mr-1 text-yellow-500"></i>` : '';
                 div.innerHTML = `<div class="font-bold text-sm truncate">${s.title}</div><div class="text-xs text-gray-400">${iconHtml}${s.category}</div>`;
                 list.appendChild(div);
@@ -298,6 +334,7 @@
             if(!DATA.slides) DATA.slides = [];
             DATA.slides.push({ id, category: 'Aviso', categoryIcon: 'fas fa-info-circle', title: 'Novo', message: '', layout: 'default', mediaType: 'image', url: '', duration: 10 });
             loadSlide(id); renderSlidesList();
+            if(window.innerWidth < 768) switchTab('editor');
         }
         function loadSlide(id) {
             currentSlideId = id;
@@ -334,11 +371,11 @@
                 s.url = processUrl(urlVal);
                 if(s.url.match(/\.(mp4|webm)$/i)) s.mediaType='video'; else if(s.url.includes('youtube')||s.url.includes('drive')) s.mediaType='iframe'; else s.mediaType='image';
             }
-            Swal.fire({icon:'success', title:'Editado', text:'Clique em SALVAR NA TV', timer:1500, showConfirmButton:false, toast:true, position:'top-end'});
+            Swal.fire({icon:'success', title:'Rascunho Salvo', text:'Clique em SALVAR NA TV para publicar', timer:1500, showConfirmButton:false, toast:true, position:'top-end'});
             renderSlidesList();
         }
         function deleteSlide() {
-            if(confirm('Excluir?')) { DATA.slides = DATA.slides.filter(x => x.id !== currentSlideId); currentSlideId = null; document.getElementById('editor-form').classList.add('hidden'); document.getElementById('no-selection').classList.remove('hidden'); renderSlidesList(); }
+            if(confirm('Excluir?')) { DATA.slides = DATA.slides.filter(x => x.id !== currentSlideId); currentSlideId = null; document.getElementById('editor-form').classList.add('hidden'); document.getElementById('no-selection').classList.remove('hidden'); renderSlidesList(); if(window.innerWidth < 768) switchTab('slides'); }
         }
         function processUrl(url) {
             if (!url) return "";
@@ -379,6 +416,8 @@
             else if (url.match(/\.(mp4|webm)$/i)) div.innerHTML = `<video src="${url}" class="h-full object-contain" controls></video>`;
             else div.innerHTML = `<img src="${url}" class="h-full object-contain">`;
         }
+        
+        if(window.innerWidth < 768) switchTab('slides');
     </script>
 </body>
 </html>
