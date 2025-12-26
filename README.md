@@ -1,1 +1,174 @@
-📘 Manual do Sistema SenaicastEste documento orienta a instalação, configuração e uso do sistema de TV Corporativa do SENAI.🛠️ PARTE 1: Instalação e Hospedagem (Técnico)O sistema funciona com dois pilares: GitHub (Hospedagem do Site) e Supabase (Banco de Dados e Arquivos).1. Configuração do Banco de Dados (Supabase)Crie uma conta em supabase.com.Crie um Novo Projeto.Vá no menu lateral SQL Editor e clique em New Query.Cole o script de criação de tabelas (fornecido anteriormente) e clique em RUN.Isso cria a tabela de configuração e a pasta de arquivos automaticamente.Vá em Project Settings > API.Copie a Project URL e a anon / public Key.Importante: Cole essas chaves dentro dos arquivos admin.html e index.html nas linhas indicadas (CONSTANTES DO SUPABASE).2. Hospedagem do Site (GitHub Pages)Crie um repositório no GitHub (ex: senaicast).Faça o upload dos dois arquivos principais:index.html (A tela da TV)admin.html (O painel gerenciador)Vá em Settings > Pages.Em Build and deployment, selecione a branch main e clique em Save.Aguarde 1 minuto. O GitHub gerará os links do seu sistema.🖥️ PARTE 2: Links de AcessoApós a configuração, o sistema estará disponível nos seguintes endereços (substitua pelo seu usuário):📺 Tela da TV: https://seu-usuario.github.io/senaicast/⚙️ Gerenciador: https://seu-usuario.github.io/senaicast/admin.html📢 PARTE 3: Guia do Usuário (Administração)Como atualizar as notícias, imagens e vídeos da TV.1. Configurações Visuais (Barra Lateral)Aqui você define a identidade da escola.Cores: Clique para alterar a cor principal (vermelho) e destaque (azul/amarelo).Nome da Escola: Digite o nome da unidade para aparecer no topo.Rodapé (Letreiro):Separador: Escolha a cor, tamanho e distância da "bolinha" que separa as notícias.Notícias: Escreva os avisos. Use o símbolo | para separar cada notícia.Exemplo: Inscrições Abertas | Visite a Biblioteca | Use EPIVelocidade: Ajuste o slider para o texto passar mais rápido ou devagar.2. Gerenciando SlidesCriar Novo: Clique no botão + NOVO na lista lateral.Editar: Clique em qualquer slide da lista para abrir os detalhes.Excluir: Clique no botão "Excluir" dentro do editor.3. Adicionando Mídia (Imagens e Vídeos)Você tem duas formas de colocar conteúdo:Upload do Computador (Recomendado):Arraste o arquivo ou clique na área pontilhada.O sistema envia para a nuvem automaticamente.Formatos: Imagens (JPG/PNG) e Vídeos Curtos (MP4).Tamanho: Recomendado até 15MB para não travar a TV.Links Externos:Cole o link no campo de URL.YouTube: Cole o link do vídeo (o sistema coloca em Autoplay mudo).Google Drive: O arquivo deve estar compartilhado como "Público / Qualquer pessoa com o link".4. AgendamentoPrograme quando o aviso deve aparecer.Início: Data/Hora para começar a exibir. (Deixe vazio para começar já).Término: Data/Hora para sair do ar automaticamente.Duração: Quantos segundos esse slide fica na tela antes de trocar.💾 Salvando as AlteraçõesPasso Fundamental:Faça todas as edições desejadas.Clique no botão CONFIRMAR RASCUNHO no slide.Para enviar para as TVs, clique no botão verde no topo: 💾 SALVAR NA TV.Aguarde a mensagem de "Sucesso". A TV atualizará sozinha em alguns segundos.🎨 Dicas de QualidadeTipoResolução IdealObsImagens Full1920 x 1080 pxPara layout "Tela Cheia".Imagens Padrão1080 x 1080 pxPara layout com texto ao lado.Vídeos1920 x 1080 pxEvite vídeos muito longos ou pesados.Se a imagem do Google Drive não aparecer, verifique se ela não está como "Restrita".
+# 📺 Senaicast – Sistema de TV Corporativa do SENAI
+
+O **Senaicast** é um sistema de **TV Corporativa** desenvolvido para exibição de avisos, notícias, imagens e vídeos em telas institucionais do **SENAI**, com gerenciamento remoto via navegador.
+
+---
+
+## 🚀 Visão Geral
+
+- 📡 Atualização automática nas TVs
+- ☁️ Backend em **Supabase** (dados e arquivos)
+- 🌐 Frontend hospedado no **GitHub Pages**
+- ⚙️ Painel administrativo simples e intuitivo
+- 🖥️ Ideal para TVs Android, navegadores e mini PCs
+
+---
+
+## 🧱 Arquitetura do Sistema
+
+| Componente | Função |
+|-----------|--------|
+| GitHub Pages | Hospedagem do site |
+| Supabase | Banco de dados e armazenamento |
+| index.html | Tela de exibição da TV |
+| admin.html | Painel de administração |
+
+---
+
+## 🛠️ Instalação e Configuração (Técnico)
+
+### 1️⃣ Configurar o Supabase
+
+1. Crie uma conta em 👉 https://supabase.com
+2. Crie um **novo projeto**
+3. Acesse **SQL Editor > New Query**
+4. Cole o **script SQL** de criação das tabelas
+5. Clique em **RUN**
+
+Isso criará:
+- Tabela de configurações
+- Estrutura de arquivos (Storage)
+
+---
+
+### 🔑 Obter Credenciais
+
+1. Vá em **Project Settings > API**
+2. Copie:
+   - **Project URL**
+   - **anon / public key**
+
+⚠️ **Importante**  
+Cole essas credenciais nos arquivos:
+- `index.html`
+- `admin.html`
+
+Nas constantes indicadas como:
+
+```js
+// CONSTANTES DO SUPABASE
+2️⃣ Hospedar no GitHub Pages
+
+Crie um repositório (ex: senaicast)
+
+Envie os arquivos:
+
+index.html
+
+admin.html
+
+Vá em Settings > Pages
+
+Em Build and deployment:
+
+Branch: main
+
+Clique em Save
+
+⏱️ Após ~1 minuto, o GitHub fornecerá o link do sistema.
+
+🔗 Links de Acesso
+
+Substitua seu-usuario pelo seu usuário do GitHub:
+
+📺 Tela da TV
+
+https://seu-usuario.github.io/senaicast/
+
+
+⚙️ Painel Administrativo
+
+https://seu-usuario.github.io/senaicast/admin.html
+
+🧑‍💼 Uso do Painel Administrativo
+🎨 Configurações Visuais
+
+Cor principal e de destaque
+
+Nome da escola/unidade
+
+Letreiro inferior (rodapé)
+
+Separador
+
+Notícias (use | para separar)
+
+Velocidade do texto
+
+Exemplo de letreiro:
+
+Inscrições Abertas | Visite a Biblioteca | Use EPI
+
+🖼️ Gerenciamento de Slides
+
+➕ Criar novo slide
+
+✏️ Editar slide existente
+
+🗑️ Excluir slide
+
+📤 Mídias Suportadas
+Upload (Recomendado)
+
+Imagens: JPG, PNG
+
+Vídeos: MP4
+
+Tamanho recomendado: até 15MB
+
+Links Externos
+
+YouTube (autoplay automático, mudo)
+
+Google Drive (arquivo público)
+
+⏱️ Agendamento
+
+Início (opcional)
+
+Término automático
+
+Duração do slide (em segundos)
+
+💾 Publicação na TV
+
+⚠️ Passo obrigatório
+
+Confirme o rascunho do slide
+
+Clique em 💾 SALVAR NA TV
+
+Aguarde a mensagem de sucesso
+
+📡 As TVs serão atualizadas automaticamente.
+
+🎨 Boas Práticas de Conteúdo
+Tipo	Resolução	Observação
+Imagem Full	1920×1080	Tela cheia
+Imagem Quadrada	1080×1080	Texto lateral
+Vídeo	1920×1080	Evite vídeos longos
+
+⚠️ Se imagens do Google Drive não aparecerem, verifique se não estão como Restritas.
+
+📌 Observações Finais
+
+O sistema foi projetado para uso interno
+
+Pode ser expandido com autenticação, logs e permissões
+
+Funciona em qualquer TV com navegador moderno
+
+📄 Licença
+
+Uso interno institucional – SENAI
+Distribuição e adaptação conforme política da unidade.
