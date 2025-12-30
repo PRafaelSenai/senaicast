@@ -256,15 +256,22 @@
         window.onload = () => { initSupabase(); };
 
         function startSystem() {
-            // HACK DE AUDIO SILENCIOSO: Toca 1s de silencio para desbloquear o motor de audio do navegador
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            gain.gain.value = 0.0001; // Quase mudo
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+            // HACK DE AUDIO: Cria e toca um contexto de áudio curto para acordar o navegador
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    const ctx = new AudioContext();
+                    ctx.resume().then(() => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        gain.gain.value = 0.0001; // Quase mudo
+                        osc.start(0);
+                        osc.stop(0.1);
+                    });
+                }
+            } catch(e) { console.log("Erro ao desbloquear áudio:", e); }
 
             const overlay = document.getElementById('start-overlay');
             overlay.style.opacity = '0';
@@ -404,8 +411,9 @@
             if (slide.mediaType === 'video') {
                 const el = document.createElement('video');
                 el.src = slide.url; 
-                el.autoplay = true; 
-                el.muted = false; // Tenta SEM MUDO
+                // REMOVIDO: el.autoplay = true; (Isso causava o mute automático)
+                el.muted = false; // Intenção de som
+                el.volume = 1.0; // Garante volume máximo
                 el.playsInline = true;
                 
                 // Exibe controle de áudio
@@ -414,7 +422,7 @@
                 currentVideoElement = el;
                 updateAudioIcon();
 
-                const playPromise = el.play();
+                const playPromise = el.play(); // Toca via JS
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
                         console.log("Autoplay c/ som falhou. Mutando...", error);
