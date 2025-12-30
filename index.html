@@ -256,7 +256,7 @@
         window.onload = () => { initSupabase(); };
 
         function startSystem() {
-            // HACK DE AUDIO: Cria e toca um contexto de áudio curto para acordar o navegador
+            // HACK DE AUDIO 1: Desbloqueia WebAudio API
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 if (AudioContext) {
@@ -271,7 +271,22 @@
                         osc.stop(0.1);
                     });
                 }
-            } catch(e) { console.log("Erro ao desbloquear áudio:", e); }
+            } catch(e) { console.log("Erro WebAudio:", e); }
+
+            // HACK DE AUDIO 2: Desbloqueia Elemento de Vídeo (Cria um video dummy e da play)
+            // Isso diz ao navegador: "O usuário interagiu e permitiu vídeo com som"
+            try {
+                const dummyVid = document.createElement('video');
+                dummyVid.muted = false; // Tenta SEM mudo
+                dummyVid.volume = 0.1;
+                // Um mp4 minúsculo vazio base64
+                dummyVid.src = "data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDJpc29tYXZjMQAAAz5tb292AAAAbG12aGQAAAAA62AAAOtgAAABAAABAAAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAActcmFrAAAAQm0vaGQAAAAA62AAAOtgAAABAAAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAm1kaWEAAAAgbWRoZAAAAADrYAAA62AAAAEAAAEAAAAAAxAAAAAASmhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAAB2aWRlb2hhbmRsZXIAAAACZW1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAA5zdGJsAAAAEmR0c2QAAAAAAAAAAQAAABxhdmMxAAAAAAAAAAEAAQAAAAEAAAEABAAAAAAEZHRzAAAAAAHAAABwY3R0cwAAAAAAAAAAAAAAAQAAAAEAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAwc3R6cwAAAAAAAAABAAAAAQAAAAAAAAAOc3RjbwAAAAAAAAABAAAAHAAAAGJ1ZHRhAAAAWmdTeWwAAAAAAAAAEWR0bXQAAAAAAAAAAAABI5BtZGF0AAAAAQ==";
+                dummyVid.style.display = 'none';
+                document.body.appendChild(dummyVid);
+                dummyVid.play().catch(e => console.log("Dummy video fail:", e)).finally(() => {
+                    setTimeout(() => dummyVid.remove(), 1000);
+                });
+            } catch(e) { console.log("Erro Dummy Video:", e); }
 
             const overlay = document.getElementById('start-overlay');
             overlay.style.opacity = '0';
@@ -411,30 +426,9 @@
             if (slide.mediaType === 'video') {
                 const el = document.createElement('video');
                 el.src = slide.url; 
-                // REMOVIDO: el.autoplay = true; (Isso causava o mute automático)
                 el.muted = false; // Intenção de som
-                el.volume = 1.0; // Garante volume máximo
+                el.volume = 1.0; 
                 el.playsInline = true;
-                
-                // Exibe controle de áudio
-                const audioBtn = document.getElementById('audio-control');
-                audioBtn.style.display = 'flex';
-                currentVideoElement = el;
-                updateAudioIcon();
-
-                const playPromise = el.play(); // Toca via JS
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.log("Autoplay c/ som falhou. Mutando...", error);
-                        el.muted = true;
-                        el.play();
-                        updateAudioIcon(); // Atualiza ícone para mudo
-                    });
-                }
-
-                el.onvolumechange = () => updateAudioIcon();
-                el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
-                el.onerror = errorHandler;
                 
                 // Ajuste de vídeo: Contain garante que não corta
                 el.style.width = "100%";
@@ -442,6 +436,16 @@
                 el.style.objectFit = "contain"; 
                 el.style.zIndex = "2";
                 
+                // Exibe controle de áudio
+                const audioBtn = document.getElementById('audio-control');
+                audioBtn.style.display = 'flex';
+                currentVideoElement = el;
+                updateAudioIcon();
+
+                el.onvolumechange = () => updateAudioIcon();
+                el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
+                el.onerror = errorHandler;
+
                 // Fundo borrado para vídeo
                 const bg = document.createElement('video');
                 bg.src = slide.url;
@@ -456,7 +460,20 @@
                 bg.style.zIndex = '1';
                 
                 container.appendChild(bg);
+
+                // IMPORTANTE: Adiciona o elemento ao DOM ANTES de dar play()
+                // Isso resolve a maioria dos bloqueios de autoplay no Chrome
                 container.appendChild(el);
+
+                const playPromise = el.play(); 
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.log("Play falhou. Browser bloqueou. Tentando mudo.", error);
+                        el.muted = true;
+                        el.play();
+                        updateAudioIcon();
+                    });
+                }
             
             } 
             // 2. IFRAME (YouTube/Drive)
