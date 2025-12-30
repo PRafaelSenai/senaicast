@@ -4,13 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciador Senaicast</title>
-    <!-- ... (Mantenha o resto igual, apenas substitua a função updatePreview no final do script) ... -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ... Estilos anteriores ... */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
@@ -21,21 +19,23 @@
         .loading-overlay.active { display: flex; }
         .senai-header { background-color: var(--senai-red, #E30613); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         .icon-option { cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; }
-        .icon-option.hover { background-color: #4b5563; }
+        .icon-option:hover { background-color: #4b5563; }
         .icon-option.selected { background-color: #E30613; color: white; }
+
+        /* Estilos para Mobile Tabs */
         .mobile-tab-btn { flex: 1; padding: 1rem; text-align: center; background: #1f2937; color: #9ca3af; border-top: 2px solid transparent; }
         .mobile-tab-btn.active { color: white; border-top-color: #E30613; background: #111827; }
         .mobile-view { display: none; height: 100%; overflow-y: auto; }
         .mobile-view.active { display: block; }
-        @media (min-width: 768px) { .mobile-only-nav { display: none; } .mobile-view { display: block !important; } }
+        
+        @media (min-width: 768px) {
+            .mobile-only-nav { display: none; }
+            .mobile-view { display: block !important; } 
+        }
     </style>
 </head>
-<!-- ... Mantenha o corpo HTML igual ... -->
-<!-- Vou reenviar o script atualizado com o preview melhorado -->
 <body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
-    <!-- ... Todo o HTML que você já tem ... -->
-    <!-- (Use o HTML da resposta anterior se precisar restaurar) -->
-    <!-- ABAIXO APENAS A ATUALIZAÇÃO DO SCRIPT -->
+
     <header class="senai-header h-20 flex items-center justify-between px-4 md:px-6 shrink-0 z-20">
         <div class="flex items-center gap-4">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/SENAI_S%C3%A3o_Paulo_logo.png/1200px-SENAI_S%C3%A3o_Paulo_logo.png" alt="Logo SENAI" class="h-8 md:h-10 bg-white px-2 py-1 rounded shadow-sm object-contain">
@@ -59,9 +59,9 @@
     </div>
 
     <div class="flex-1 overflow-hidden flex flex-col md:flex-row relative">
+        <!-- 1. CONFIGURAÇÕES -->
         <aside id="view-config" class="mobile-view active w-full md:w-72 bg-gray-800 border-r border-gray-700 custom-scrollbar p-5 space-y-5">
-            <!-- ... (Conteúdo da Sidebar Config Igual) ... -->
-             <h3 class="text-xs font-bold text-yellow-500 uppercase border-b border-gray-700 pb-2">Aparência & Texto</h3>
+            <h3 class="text-xs font-bold text-yellow-500 uppercase border-b border-gray-700 pb-2">Aparência & Texto</h3>
             <div>
                 <label class="text-xs text-gray-300 block mb-1">Estilo da Fonte</label>
                 <select id="conf-font" class="input-dark text-xs mb-3 cursor-pointer">
@@ -79,24 +79,37 @@
             </div>
             <div class="h-px bg-gray-700"></div>
             <div><label class="text-xs text-gray-300 block mb-1">Cores</label><div class="flex gap-2"><input type="color" id="conf-primary" class="h-8 flex-1 rounded cursor-pointer"><input type="color" id="conf-accent" class="h-8 flex-1 rounded cursor-pointer"></div></div>
+            
             <h3 class="text-xs font-bold text-yellow-500 uppercase border-b border-gray-700 pb-2 mt-4">Rodapé / Letreiro</h3>
+            
             <div class="bg-gray-700/30 p-2 rounded border border-gray-600">
                 <label class="text-[10px] text-gray-400 font-bold uppercase mb-2 block">Separador (Bolinha)</label>
                 <div class="mb-2"><label class="text-xs text-gray-300 block mb-1">Cor</label><input type="color" id="conf-sep-color" class="h-8 w-full rounded cursor-pointer"></div>
                 <div class="mb-2"><label class="text-xs text-gray-300 block mb-1">Tamanho</label><div class="flex items-center gap-2"><input type="range" id="conf-sep-size" min="0.5" max="3" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500"><span id="size-val" class="text-xs text-gray-400 w-10 text-right">1.5rem</span></div></div>
                 <div><label class="text-xs text-gray-300 block mb-1">Espaçamento</label><div class="flex items-center gap-2"><input type="range" id="conf-sep-spacing" min="0.1" max="5" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500"><span id="spacing-val" class="text-xs text-gray-400 w-10 text-right">0.5rem</span></div></div>
             </div>
+
             <div class="bg-gray-700/30 p-2 rounded border border-gray-600">
                 <label class="text-[10px] text-gray-400 font-bold uppercase mb-2 block">Texto / Fundo</label>
-                <div class="flex gap-2 mb-2"><div class="flex-1"><label class="text-[10px] text-gray-400">Fundo</label><input type="color" id="conf-ticker-bg" class="h-8 w-full rounded cursor-pointer"></div><div class="flex-1"><label class="text-[10px] text-gray-400">Texto</label><input type="color" id="conf-ticker-text" class="h-8 w-full rounded cursor-pointer"></div></div>
+                <div class="flex gap-2 mb-2">
+                    <div class="flex-1"><label class="text-[10px] text-gray-400">Fundo</label><input type="color" id="conf-ticker-bg" class="h-8 w-full rounded cursor-pointer"></div>
+                    <div class="flex-1"><label class="text-[10px] text-gray-400">Texto</label><input type="color" id="conf-ticker-text" class="h-8 w-full rounded cursor-pointer"></div>
+                </div>
                 <div><label class="text-[10px] text-gray-400">Velocidade</label><input type="range" id="conf-ticker-speed" min="10" max="120" step="5" class="w-full h-2 bg-gray-600 rounded-lg accent-yellow-500"></div>
             </div>
-            <div><label class="text-xs text-gray-300 block mb-1">Notícias</label><div class="flex flex-wrap gap-1 mb-1 bg-gray-800 p-1 rounded" id="ticker-icon-toolbar"></div><textarea id="conf-ticker" class="input-dark h-24 text-xs" placeholder="Notícia 1 | Notícia 2"></textarea></div>
+
+            <div>
+                <label class="text-xs text-gray-300 block mb-1">Notícias</label>
+                <div class="flex flex-wrap gap-1 mb-1 bg-gray-800 p-1 rounded" id="ticker-icon-toolbar"></div>
+                <textarea id="conf-ticker" class="input-dark h-24 text-xs" placeholder="Notícia 1 | Notícia 2"></textarea>
+            </div>
+            
             <h3 class="text-xs font-bold text-yellow-500 uppercase border-b border-gray-700 pb-2 mt-4">Escola</h3>
             <div><label class="text-xs text-gray-300 block mb-1">Nome da Escola</label><textarea id="conf-school" class="input-dark h-12 text-xs" oninput="updateSchoolNameDisplay(this.value)"></textarea></div>
             <div class="h-20 md:hidden"></div>
         </aside>
 
+        <!-- 2. LISTA DE SLIDES -->
         <aside id="view-slides" class="mobile-view w-full md:w-80 bg-gray-900 border-r border-gray-700 flex flex-col">
             <div class="p-4 border-b border-gray-700 bg-gray-800 flex justify-between">
                 <h3 class="font-bold text-sm text-white">Slides</h3>
@@ -105,17 +118,58 @@
             <div id="slides-list" class="flex-1 overflow-y-auto p-2 space-y-2 pb-20 md:pb-2"></div>
         </aside>
 
+        <!-- 3. EDITOR -->
         <main id="view-editor" class="mobile-view w-full flex-1 bg-black relative">
-            <div id="no-selection" class="absolute inset-0 flex flex-col items-center justify-center text-gray-600 p-4 text-center"><i class="fas fa-hand-pointer text-5xl mb-4 opacity-50"></i><p>Selecione um slide na aba "Slides" para editar</p><button onclick="switchTab('slides')" class="mt-4 bg-gray-700 px-4 py-2 rounded md:hidden text-sm">Ir para Lista</button></div>
+            <div id="no-selection" class="absolute inset-0 flex flex-col items-center justify-center text-gray-600 p-4 text-center">
+                <i class="fas fa-hand-pointer text-5xl mb-4 opacity-50"></i><p>Selecione um slide na aba "Slides" para editar</p>
+                <button onclick="switchTab('slides')" class="mt-4 bg-gray-700 px-4 py-2 rounded md:hidden text-sm">Ir para Lista</button>
+            </div>
             <div id="editor-form" class="hidden absolute inset-0 overflow-y-auto p-4 md:p-8 bg-gray-900">
                 <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-xl space-y-6 relative mb-20 md:mb-0">
                     <div id="upload-overlay" class="loading-overlay rounded-xl"><i class="fas fa-circle-notch fa-spin text-4xl text-white mb-2"></i><span class="font-bold text-sm">Enviando...</span></div>
-                    <div><label class="block text-xs font-bold text-gray-400 uppercase mb-2">Mídia</label><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="border-2 border-dashed border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-gray-700/50 cursor-pointer relative group h-48"><input type="file" id="file-upload" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleSupabaseUpload(this)"><i class="fas fa-cloud-upload-alt text-4xl text-gray-500 mb-2"></i><span class="text-sm font-medium text-gray-300">Upload do PC</span><span class="text-[10px] text-gray-500 mt-1">Imagens (1920x1080px) • Vídeos (Max 15MB)</span></div><div class="bg-black rounded-lg border border-gray-700 flex items-center justify-center overflow-hidden h-48 relative" id="media-preview"><span class="text-xs text-gray-500">Preview</span></div></div><input type="text" id="edit-url" class="input-dark text-xs mt-2" placeholder="URL" oninput="handleUrlInput(this.value)"></div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-xs font-bold text-gray-400 mb-1">Categoria & Ícone</label><div class="flex gap-2"><div class="relative"><button id="cat-icon-btn" class="input-dark w-10 h-full flex items-center justify-center text-lg hover:bg-gray-600" onclick="toggleIconPicker()"><i class="fas fa-info-circle"></i></button><input type="hidden" id="edit-category-icon" value="fas fa-info-circle"><div id="icon-picker-dropdown" class="hidden absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 p-2 rounded shadow-xl z-50 grid grid-cols-5 gap-1 w-48"></div></div><input type="text" id="edit-category" class="input-dark flex-1" placeholder="Ex: Aviso"></div></div><div><label class="block text-xs font-bold text-gray-400 mb-1">Layout</label><select id="edit-layout" class="input-dark"><option value="default">Padrão</option><option value="fullscreen">Tela Cheia</option></select></div></div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Mídia</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="border-2 border-dashed border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-gray-700/50 cursor-pointer relative group h-48">
+                                <input type="file" id="file-upload" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleSupabaseUpload(this)">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-500 mb-2"></i><span class="text-sm font-medium text-gray-300">Upload do PC</span>
+                                <span class="text-[10px] text-gray-500 mt-1">Imagens (1920x1080px) • Vídeos (Max 15MB)</span>
+                            </div>
+                            <div class="bg-black rounded-lg border border-gray-700 flex items-center justify-center overflow-hidden h-48" id="media-preview"><span class="text-xs text-gray-500">Preview</span></div>
+                        </div>
+                        <input type="text" id="edit-url" class="input-dark text-xs mt-2" placeholder="URL" oninput="handleUrlInput(this.value)">
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-1">Categoria & Ícone</label>
+                            <div class="flex gap-2">
+                                <div class="relative">
+                                    <button id="cat-icon-btn" class="input-dark w-10 h-full flex items-center justify-center text-lg hover:bg-gray-600" onclick="toggleIconPicker()">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                    <input type="hidden" id="edit-category-icon" value="fas fa-info-circle">
+                                    <div id="icon-picker-dropdown" class="hidden absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 p-2 rounded shadow-xl z-50 grid grid-cols-5 gap-1 w-48"></div>
+                                </div>
+                                <input type="text" id="edit-category" class="input-dark flex-1" placeholder="Ex: Aviso">
+                            </div>
+                        </div>
+                        <div><label class="block text-xs font-bold text-gray-400 mb-1">Layout</label><select id="edit-layout" class="input-dark"><option value="default">Padrão</option><option value="fullscreen">Tela Cheia</option></select></div>
+                    </div>
                     <div><label class="block text-xs font-bold text-gray-400 mb-1">Título</label><input type="text" id="edit-title" class="input-dark text-lg font-bold"></div>
                     <div><label class="block text-xs font-bold text-gray-400 mb-1">Mensagem</label><textarea id="edit-message" class="input-dark h-24"></textarea></div>
-                    <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-600 grid grid-cols-3 gap-4"><div><label class="block text-[10px] text-gray-400 mb-1">Início</label><input type="datetime-local" id="edit-startDate" class="input-dark text-xs"></div><div><label class="block text-[10px] text-gray-400 mb-1">Término</label><input type="datetime-local" id="edit-endDate" class="input-dark text-xs"></div><div><label class="block text-[10px] text-gray-400 mb-1">Duração (s)</label><input type="number" id="edit-duration" class="input-dark text-xs" value="10"></div></div>
-                    <div class="flex justify-between pt-2"><button onclick="deleteSlide()" class="text-red-400 text-sm font-bold px-4">Excluir</button><button onclick="saveSlideLocal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg w-full md:w-auto">CONFIRMAR RASCUNHO</button></div>
+                    
+                    <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-600 grid grid-cols-3 gap-4">
+                        <div><label class="block text-[10px] text-gray-400 mb-1">Início</label><input type="datetime-local" id="edit-startDate" class="input-dark text-xs"></div>
+                        <div><label class="block text-[10px] text-gray-400 mb-1">Término</label><input type="datetime-local" id="edit-endDate" class="input-dark text-xs"></div>
+                        <div><label class="block text-[10px] text-gray-400 mb-1">Duração (s)</label><input type="number" id="edit-duration" class="input-dark text-xs" value="10"></div>
+                    </div>
+
+                    <div class="flex justify-between pt-2">
+                        <button onclick="deleteSlide()" class="text-red-400 text-sm font-bold px-4">Excluir</button>
+                        <button onclick="saveSlideLocal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg w-full md:w-auto">CONFIRMAR RASCUNHO</button>
+                    </div>
                 </div>
             </div>
         </main>
@@ -216,11 +270,9 @@
             DATA.separatorColor = document.getElementById('conf-sep-color').value;
             DATA.separatorSize = document.getElementById('conf-sep-size').value;
             DATA.separatorSpacing = document.getElementById('conf-sep-spacing').value;
-            
             DATA.tickerBg = document.getElementById('conf-ticker-bg').value;
             DATA.tickerColor = document.getElementById('conf-ticker-text').value;
             DATA.tickerSpeed = document.getElementById('conf-ticker-speed').value;
-
             DATA.tickerText = document.getElementById('conf-ticker').value;
             DATA.schoolName = document.getElementById('conf-school').value;
 
@@ -256,7 +308,6 @@
             document.getElementById('size-val').innerText = (DATA.separatorSize || 1.5) + 'rem';
             document.getElementById('conf-sep-spacing').value = DATA.separatorSpacing || 0.5;
             document.getElementById('spacing-val').innerText = (DATA.separatorSpacing || 0.5) + 'rem';
-            
             document.getElementById('conf-ticker-bg').value = DATA.tickerBg || '#0047B6';
             document.getElementById('conf-ticker-text').value = DATA.tickerColor || '#ffffff';
             document.getElementById('conf-ticker-speed').value = DATA.tickerSpeed || 30;
@@ -266,36 +317,6 @@
             updateSchoolNameDisplay(DATA.schoolName);
         }
 
-        // Função Preview Atualizada com Blur no Admin
-        function updatePreview(url) {
-            const div = document.getElementById('media-preview');
-            div.innerHTML = '';
-            div.style.position = 'relative';
-            div.style.overflow = 'hidden';
-
-            if (!url) { div.innerHTML = '<span class="text-xs text-gray-500">Sem Mídia</span>'; return; }
-
-            if (url.includes('youtube') || url.includes('iframe')) {
-                div.innerHTML = `<iframe src="${url}" class="h-full w-full border-0 relative z-10"></iframe>`;
-            } else if (url.match(/\.(mp4|webm)$/i)) {
-                div.innerHTML = `<video src="${url}" class="h-full object-contain relative z-10" controls></video>`;
-            } else {
-                // Blur Effect no Preview
-                const bg = document.createElement('div');
-                bg.style.position = 'absolute'; bg.style.inset = '0';
-                bg.style.background = `url('${url}') center/cover`;
-                bg.style.filter = 'blur(10px) brightness(0.5)';
-                bg.style.zIndex = '0';
-                div.appendChild(bg);
-
-                const img = document.createElement('img');
-                img.src = url;
-                img.className = "h-full object-contain relative z-10";
-                div.appendChild(img);
-            }
-        }
-
-        // Restante das funções iguais (renderSlidesList, etc)
         function renderSlidesList() {
             const list = document.getElementById('slides-list'); list.innerHTML = '';
             (DATA.slides || []).forEach(s => {
@@ -387,7 +408,14 @@
             } catch (e) { Swal.fire('Erro', e.message, 'error'); } 
             finally { document.getElementById('upload-overlay').classList.remove('active'); input.value = ''; }
         }
-
+        function updatePreview(url) {
+            const div = document.getElementById('media-preview');
+            if (!url) { div.innerHTML = 'Sem Mídia'; return; }
+            if (url.includes('youtube') || url.includes('iframe')) div.innerHTML = `<iframe src="${url}" class="h-full w-full border-0"></iframe>`;
+            else if (url.match(/\.(mp4|webm)$/i)) div.innerHTML = `<video src="${url}" class="h-full object-contain" controls></video>`;
+            else div.innerHTML = `<img src="${url}" class="h-full object-contain">`;
+        }
+        
         if(window.innerWidth < 768) switchTab('slides');
     </script>
 </body>
