@@ -42,7 +42,7 @@
             <div class="h-8 w-px bg-white/30 hidden md:block"></div>
             <div class="flex flex-col justify-center">
                 <h1 class="text-sm md:text-lg font-bold tracking-wide text-white leading-tight">Gerenciador Senaicast</h1>
-                <span id="header-school-name" class="text-[10px] md:text-xs font-medium text-white/90 uppercase tracking-wide truncate max-w-[150px] md:max-w-xs">Orlando Laviero Ferraiuolo</span>
+                <span id="header-school-name" class="text-[10px] md:text-xs font-medium text-white/90 uppercase tracking-wide truncate max-w-[150px] md:max-w-xs">Painel Administrativo</span>
             </div>
         </div>
         <div class="flex items-center gap-2">
@@ -69,8 +69,6 @@
                     <option value="'Roboto', sans-serif">Roboto (Google)</option>
                     <option value="'Open Sans', sans-serif">Open Sans (Limpo)</option>
                     <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Clássico (Arial)</option>
-                    <option value="'Georgia', serif">Elegante (Serif)</option>
-                    <option value="'Courier New', monospace">Técnico (Mono)</option>
                 </select>
             </div>
             <div>
@@ -83,10 +81,9 @@
             <h3 class="text-xs font-bold text-yellow-500 uppercase border-b border-gray-700 pb-2 mt-4">Rodapé / Letreiro</h3>
             
             <div class="bg-gray-700/30 p-2 rounded border border-gray-600">
-                <label class="text-[10px] text-gray-400 font-bold uppercase mb-2 block">Separador (Bolinha)</label>
+                <label class="text-[10px] text-gray-400 font-bold uppercase mb-2 block">Separador</label>
                 <div class="mb-2"><label class="text-xs text-gray-300 block mb-1">Cor</label><input type="color" id="conf-sep-color" class="h-8 w-full rounded cursor-pointer"></div>
-                <div class="mb-2"><label class="text-xs text-gray-300 block mb-1">Tamanho</label><div class="flex items-center gap-2"><input type="range" id="conf-sep-size" min="0.5" max="3" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500"><span id="size-val" class="text-xs text-gray-400 w-10 text-right">1.5rem</span></div></div>
-                <div><label class="text-xs text-gray-300 block mb-1">Espaçamento</label><div class="flex items-center gap-2"><input type="range" id="conf-sep-spacing" min="0.1" max="5" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500"><span id="spacing-val" class="text-xs text-gray-400 w-10 text-right">0.5rem</span></div></div>
+                <div><label class="text-xs text-gray-300 block mb-1">Tamanho</label><div class="flex items-center gap-2"><input type="range" id="conf-sep-size" min="0.5" max="3" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg accent-yellow-500"><span id="size-val" class="text-xs text-gray-400 w-10 text-right">1.5rem</span></div></div>
             </div>
 
             <div class="bg-gray-700/30 p-2 rounded border border-gray-600">
@@ -141,8 +138,8 @@
                         <input type="text" id="edit-url" class="input-dark text-xs mt-2" placeholder="URL" oninput="handleUrlInput(this.value)">
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="col-span-1 md:col-span-2">
                             <label class="block text-xs font-bold text-gray-400 mb-1">Categoria & Ícone</label>
                             <div class="flex gap-2">
                                 <div class="relative">
@@ -157,6 +154,17 @@
                         </div>
                         <div><label class="block text-xs font-bold text-gray-400 mb-1">Layout</label><select id="edit-layout" class="input-dark"><option value="default">Padrão</option><option value="fullscreen">Tela Cheia</option></select></div>
                     </div>
+                    
+                    <!-- NOVO: CONTROLE DE AJUSTE -->
+                    <div class="bg-gray-700/30 p-3 rounded border border-gray-600">
+                         <label class="block text-xs font-bold text-yellow-500 mb-1">Ajuste da Imagem</label>
+                         <select id="edit-image-fit" class="input-dark text-sm">
+                             <option value="contain">Ajustar (Sem Cortes) + Fundo</option>
+                             <option value="cover">Preencher Tela (Pode cortar)</option>
+                         </select>
+                         <p class="text-[10px] text-gray-400 mt-1">* "Ajustar" garante que a imagem inteira apareça. "Preencher" remove bordas mas corta excessos.</p>
+                    </div>
+
                     <div><label class="block text-xs font-bold text-gray-400 mb-1">Título</label><input type="text" id="edit-title" class="input-dark text-lg font-bold"></div>
                     <div><label class="block text-xs font-bold text-gray-400 mb-1">Mensagem</label><textarea id="edit-message" class="input-dark h-24"></textarea></div>
                     
@@ -205,7 +213,6 @@
             setupIconPickers();
             document.getElementById('conf-zoom').addEventListener('input', e => document.getElementById('zoom-val').innerText = Math.round(e.target.value * 100) + '%');
             document.getElementById('conf-sep-size').addEventListener('input', e => document.getElementById('size-val').innerText = e.target.value + 'rem');
-            document.getElementById('conf-sep-spacing').addEventListener('input', e => document.getElementById('spacing-val').innerText = e.target.value + 'rem');
         };
 
         function setupIconPickers() {
@@ -237,7 +244,7 @@
         
         function updateSchoolNameDisplay(val) {
             const el = document.getElementById('header-school-name');
-            if(el) el.innerText = val || 'Orlando Laviero Ferraiuolo';
+            if(el) el.innerText = val || 'Painel Administrativo';
         }
 
         async function loadData() {
@@ -269,7 +276,6 @@
             
             DATA.separatorColor = document.getElementById('conf-sep-color').value;
             DATA.separatorSize = document.getElementById('conf-sep-size').value;
-            DATA.separatorSpacing = document.getElementById('conf-sep-spacing').value;
             DATA.tickerBg = document.getElementById('conf-ticker-bg').value;
             DATA.tickerColor = document.getElementById('conf-ticker-text').value;
             DATA.tickerSpeed = document.getElementById('conf-ticker-speed').value;
@@ -306,8 +312,6 @@
             document.getElementById('conf-sep-color').value = DATA.separatorColor || '#ffffff';
             document.getElementById('conf-sep-size').value = DATA.separatorSize || 1.5;
             document.getElementById('size-val').innerText = (DATA.separatorSize || 1.5) + 'rem';
-            document.getElementById('conf-sep-spacing').value = DATA.separatorSpacing || 0.5;
-            document.getElementById('spacing-val').innerText = (DATA.separatorSpacing || 0.5) + 'rem';
             document.getElementById('conf-ticker-bg').value = DATA.tickerBg || '#0047B6';
             document.getElementById('conf-ticker-text').value = DATA.tickerColor || '#ffffff';
             document.getElementById('conf-ticker-speed').value = DATA.tickerSpeed || 30;
@@ -347,6 +351,8 @@
             selectCategoryIcon(icon);
             document.getElementById('edit-message').value = s.message || "";
             document.getElementById('edit-layout').value = s.layout || "default";
+            // Carrega preferência de ajuste (padrão 'contain')
+            document.getElementById('edit-image-fit').value = s.imageFit || "contain"; 
             document.getElementById('edit-duration').value = s.duration || 10;
             document.getElementById('edit-startDate').value = s.startDate || '';
             document.getElementById('edit-endDate').value = s.endDate || '';
@@ -362,6 +368,7 @@
             s.categoryIcon = document.getElementById('edit-category-icon').value;
             s.message = document.getElementById('edit-message').value;
             s.layout = document.getElementById('edit-layout').value;
+            s.imageFit = document.getElementById('edit-image-fit').value; // Salva o novo campo
             s.duration = parseInt(document.getElementById('edit-duration').value) || 10;
             s.startDate = document.getElementById('edit-startDate').value;
             s.endDate = document.getElementById('edit-endDate').value;
