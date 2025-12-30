@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel SENAI</title>
+    <title>Painel SENAI - TV</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Fontes do Google -->
@@ -111,7 +111,6 @@
             width: 100%; 
             height: 100%; 
             border: none; 
-            /* object-fit é controlado via JS */
         }
         
         .media-viewer iframe { object-fit: contain; }
@@ -160,22 +159,33 @@
         
         @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
         
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: white; display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s; }
+        /* Overlay de Start (Crucial para áudio) */
+        #start-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #000; color: white; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; z-index: 9999; 
+            cursor: pointer; transition: opacity 0.5s;
+        }
+        #start-overlay:hover .start-btn { transform: scale(1.1); background-color: #E30613; }
+        .start-btn {
+            background-color: #333; padding: 1rem 2rem; border-radius: 50px; 
+            font-weight: bold; font-size: 1.5rem; margin-top: 1rem; 
+            transition: all 0.3s; display: flex; align-items: center; gap: 10px;
+        }
         
         .error-message {
-            color: #666;
-            text-align: center;
-            font-family: monospace;
-            padding: 20px;
-            background: #111;
-            border-radius: 8px;
-            border: 1px solid #333;
-            z-index: 10;
+            color: #666; text-align: center; font-family: monospace; padding: 20px;
+            background: #111; border-radius: 8px; border: 1px solid #333; z-index: 10;
         }
     </style>
 </head>
 <body>
-    <div id="loading-overlay"><div><i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-blue-500"></i><br>Iniciando Sistema...</div></div>
+    <!-- Overlay obrigatório para desbloquear áudio -->
+    <div id="start-overlay" onclick="startSystem()">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/SENAI_S%C3%A3o_Paulo_logo.png/1200px-SENAI_S%C3%A3o_Paulo_logo.png" style="height: 80px; background:white; padding: 10px; border-radius: 8px; margin-bottom: 2rem;">
+        <div class="start-btn"><i class="fas fa-play"></i> Clique para Iniciar a TV</div>
+        <div class="mt-4 text-gray-500 text-sm">Necessário para habilitar o som automático</div>
+    </div>
 
     <div id="tv-container" class="opacity-0 transition-opacity duration-1000">
         <div class="header-bar">
@@ -224,8 +234,26 @@
         let SYSTEM_CONFIG = {};
         let currentSlideIndex = 0;
         let slideTimer = null;
+        let isStarted = false;
 
         window.onload = () => { initSupabase(); };
+
+        function startSystem() {
+            const overlay = document.getElementById('start-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 500);
+            
+            // Tenta desbloquear o contexto de áudio
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                ctx.resume();
+            }
+            
+            isStarted = true;
+            document.getElementById('tv-container').classList.remove('opacity-0');
+            initTV();
+        }
 
         function initSupabase() {
             try {
@@ -237,7 +265,10 @@
                         if (payload.new && payload.new.data) {
                             SYSTEM_CONFIG = payload.new.data;
                             applyGlobalSettings();
-                            if(!slideTimer) initTV(); 
+                            if(isStarted) {
+                                clearTimeout(slideTimer);
+                                initTV(); 
+                            }
                         }
                     })
                     .subscribe();
@@ -251,38 +282,30 @@
             if (data && data.data) {
                 SYSTEM_CONFIG = data.data;
                 applyGlobalSettings();
-                const loader = document.getElementById('loading-overlay');
-                if(loader) { loader.style.opacity = '0'; setTimeout(()=>loader.remove(),500); }
-                document.getElementById('tv-container').classList.remove('opacity-0');
-                initTV();
             }
         }
 
         function applyGlobalSettings() {
             const root = document.documentElement;
-            // Cores
             root.style.setProperty('--primary-color', SYSTEM_CONFIG.primaryColor || '#E30613');
             root.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor || '#0047B6');
             root.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom || "1.0");
             root.style.setProperty('--font-family', SYSTEM_CONFIG.fontFamily || "'Segoe UI', sans-serif");
-            
-            // Separadores
             root.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor || '#ffffff');
             root.style.setProperty('--separator-spacing', (SYSTEM_CONFIG.separatorSpacing || 0.5) + 'rem');
             root.style.setProperty('--separator-size', (SYSTEM_CONFIG.separatorSize || 1.5) + 'rem');
-            
-            // Ticker
             root.style.setProperty('--ticker-bg', SYSTEM_CONFIG.tickerBg || SYSTEM_CONFIG.accentColor || '#0047B6');
             root.style.setProperty('--ticker-color', SYSTEM_CONFIG.tickerColor || '#FFFFFF');
             root.style.setProperty('--ticker-duration', (SYSTEM_CONFIG.tickerSpeed || 30) + 's');
             
-            // Texto
             document.getElementById('display-school-name').innerText = SYSTEM_CONFIG.schoolName || "SENAI";
             const sepHtml = `<span class="ticker-separator">•</span>`;
             document.getElementById('display-ticker').innerHTML = (SYSTEM_CONFIG.tickerText || "").replace(/\|/g, sepHtml);
         }
 
         function initTV() {
+            if (!isStarted) return; // Aguarda clique do usuário
+
             const now = new Date();
             let activeSlides = (SYSTEM_CONFIG.slides || []).filter(s => {
                 const start = s.startDate ? new Date(s.startDate) : null;
@@ -305,7 +328,7 @@
 
             clearTimeout(slideTimer);
             let duration = (slide.duration || 10) * 1000;
-            if (slide.mediaType === 'video') duration += 5000; // Buffer segurança
+            if (slide.mediaType === 'video') duration += 2000; // Buffer segurança
 
             slideTimer = setTimeout(() => {
                 currentSlideIndex++;
@@ -313,16 +336,15 @@
             }, duration);
         }
 
-        // --- RENDERIZAÇÃO INTELIGENTE DE FORMATO ---
         function renderSlide(slide) {
-            // Texto
+            // Atualiza Textos
             document.getElementById('slide-category').innerText = slide.category || '';
             const iconClass = slide.categoryIcon || 'fas fa-info-circle';
             document.getElementById('slide-icon').className = iconClass;
             document.getElementById('slide-title').innerText = slide.title || '';
             document.getElementById('slide-message').innerText = slide.message || '';
             
-            // Layout
+            // Layout (Tela Cheia vs Dividida)
             const layout = document.getElementById('main-layout');
             if (slide.layout === 'fullscreen') layout.classList.add('layout-fullscreen');
             else layout.classList.remove('layout-fullscreen');
@@ -330,24 +352,24 @@
             const container = document.getElementById('media-container');
             container.innerHTML = '';
             
-            // Tratamento de Erro
             const errorHandler = () => {
-                console.warn("Falha ao carregar mídia:", slide.url);
+                console.warn("Falha mídia:", slide.url);
                 container.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle text-4xl mb-2 text-yellow-500"></i><br>Mídia Indisponível<br>Avançando...</div>';
-                clearTimeout(slideTimer);
-                slideTimer = setTimeout(() => { currentSlideIndex++; initTV(); }, 3000);
             };
 
+            // 1. VÍDEO
             if (slide.mediaType === 'video') {
                 const el = document.createElement('video');
                 el.src = slide.url; 
                 el.autoplay = true; 
-                el.muted = false; // Tenta com som
+                
+                // Tenta tocar COM SOM porque o usuário já interagiu no início
+                el.muted = false; 
                 
                 const playPromise = el.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        console.log("Autoplay bloqueado. Mudo.");
+                        console.log("Autoplay c/ som falhou, tentando mudo.", error);
                         el.muted = true;
                         el.play();
                     });
@@ -355,21 +377,43 @@
 
                 el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
                 el.onerror = errorHandler;
-                // Videos sempre preenchem
+                
+                // Ajuste de vídeo: Contain garante que não corta
                 el.style.width = "100%";
                 el.style.height = "100%";
-                el.style.objectFit = "cover";
+                el.style.objectFit = "contain"; 
+                el.style.zIndex = "2";
+                
+                // Fundo borrado para vídeo também (opcional, mas fica bonito)
+                const bg = document.createElement('video');
+                bg.src = slide.url;
+                bg.autoplay = false;
+                bg.muted = true;
+                bg.style.position = 'absolute';
+                bg.style.inset = '0';
+                bg.style.width = '100%';
+                bg.style.height = '100%';
+                bg.style.objectFit = 'cover';
+                bg.style.filter = 'blur(20px) brightness(0.4)';
+                bg.style.zIndex = '1';
+                
+                container.appendChild(bg);
                 container.appendChild(el);
             
-            } else if (slide.mediaType === 'iframe') {
+            } 
+            // 2. IFRAME (YouTube/Drive)
+            else if (slide.mediaType === 'iframe') {
                 const el = document.createElement('iframe');
                 el.src = slide.url; 
                 el.allow = "autoplay; encrypted-media";
                 el.onerror = errorHandler;
+                el.style.zIndex = "2";
+                el.style.position = "relative";
                 container.appendChild(el);
             
-            } else {
-                // IMAGEM
+            } 
+            // 3. IMAGEM (Lógica de Ajuste Inteligente)
+            else {
                 const img = document.createElement('img');
                 img.src = slide.url;
                 img.style.width = "100%";
@@ -380,32 +424,27 @@
                 img.style.transition = "opacity 0.5s";
 
                 img.onload = function() {
-                    // BLINDAGEM
-                    if (this.parentNode !== container) return;
+                    // Verifica preferência do slide ou usa padrão "fit" (sem cortes)
+                    const fitMode = slide.imageFit || 'contain'; // 'contain' (Ajustar) ou 'cover' (Preencher)
 
-                    const ratio = this.naturalWidth / this.naturalHeight;
-                    
-                    // LÓGICA DE CORTE:
-                    // Se ratio < 1.2 (Quadrada 1.0 ou Vertical 0.56) -> USA CONTAIN + BLUR
-                    // Se ratio >= 1.2 (4:3=1.33, 16:9=1.77, etc) -> USA COVER (Padrão)
-                    
-                    if (ratio < 1.2) {
-                        this.style.objectFit = "contain"; 
+                    if (fitMode === 'cover') {
+                        // Modo antigo (pode cortar)
+                        this.style.objectFit = 'cover';
+                    } else {
+                        // Modo NOVO (Padrão): Nunca corta, usa fundo borrado
+                        this.style.objectFit = 'contain';
                         
-                        // Fundo Desfocado
+                        // Cria o fundo borrado
                         const bg = document.createElement('div');
                         bg.style.position = 'absolute';
                         bg.style.inset = '0';
                         bg.style.backgroundImage = `url('${slide.url}')`;
                         bg.style.backgroundSize = 'cover';
                         bg.style.backgroundPosition = 'center';
-                        bg.style.filter = 'blur(20px) brightness(0.5)';
+                        bg.style.filter = 'blur(25px) brightness(0.4)'; // Blur mais forte e escuro
                         bg.style.zIndex = '1';
-                        bg.style.transform = 'scale(1.1)';
+                        bg.style.transform = 'scale(1.1)'; // Evita bordas brancas do blur
                         container.insertBefore(bg, this);
-                    } else {
-                        // Imagens Padrão (TV)
-                        this.style.objectFit = "cover";
                     }
                     this.style.opacity = "1";
                 };
