@@ -111,7 +111,7 @@
             width: 100%; 
             height: 100%; 
             border: none; 
-            /* object-fit é controlado via JS agora */
+            /* object-fit é controlado via JS */
         }
         
         .media-viewer iframe { object-fit: contain; }
@@ -313,7 +313,7 @@
             }, duration);
         }
 
-        // --- RENDERIZAÇÃO BLINDADA E INTELIGENTE ---
+        // --- RENDERIZAÇÃO INTELIGENTE DE FORMATO ---
         function renderSlide(slide) {
             // Texto
             document.getElementById('slide-category').innerText = slide.category || '';
@@ -344,11 +344,10 @@
                 el.autoplay = true; 
                 el.muted = false; // Tenta com som
                 
-                // Tenta tocar com som, se falhar (padrão de navegadores), toca mudo
                 const playPromise = el.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        console.log("Autoplay com som bloqueado pelo navegador. Ativando mudo.");
+                        console.log("Autoplay bloqueado. Mudo.");
                         el.muted = true;
                         el.play();
                     });
@@ -356,7 +355,10 @@
 
                 el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
                 el.onerror = errorHandler;
-                el.className = "h-full w-full object-cover";
+                // Videos sempre preenchem
+                el.style.width = "100%";
+                el.style.height = "100%";
+                el.style.objectFit = "cover";
                 container.appendChild(el);
             
             } else if (slide.mediaType === 'iframe') {
@@ -367,29 +369,30 @@
                 container.appendChild(el);
             
             } else {
-                // --- LÓGICA INTELIGENTE DE IMAGEM ---
+                // IMAGEM
                 const img = document.createElement('img');
                 img.src = slide.url;
                 img.style.width = "100%";
                 img.style.height = "100%";
                 img.style.position = "relative";
                 img.style.zIndex = "2";
-                img.style.opacity = "0"; // Começa invisível para cálculo
+                img.style.opacity = "0"; 
                 img.style.transition = "opacity 0.5s";
 
                 img.onload = function() {
-                    // BLINDAGEM CONTRA ERRO INSERTBEFORE
-                    // Verifica se o container ainda é o pai da imagem (se o slide não mudou)
+                    // BLINDAGEM
                     if (this.parentNode !== container) return;
 
                     const ratio = this.naturalWidth / this.naturalHeight;
                     
-                    // Se a imagem for "estreita" (Vertical/Quadrada - Ratio < 1.55)
-                    // E se não for um layout fullscreen forçado que exija cover
-                    if (ratio < 1.55) {
-                        this.style.objectFit = "contain"; // Mostra inteira sem cortar
+                    // LÓGICA DE CORTE:
+                    // Se ratio < 1.2 (Quadrada 1.0 ou Vertical 0.56) -> USA CONTAIN + BLUR
+                    // Se ratio >= 1.2 (4:3=1.33, 16:9=1.77, etc) -> USA COVER (Padrão)
+                    
+                    if (ratio < 1.2) {
+                        this.style.objectFit = "contain"; 
                         
-                        // Cria fundo desfocado bonito
+                        // Fundo Desfocado
                         const bg = document.createElement('div');
                         bg.style.position = 'absolute';
                         bg.style.inset = '0';
@@ -401,7 +404,7 @@
                         bg.style.transform = 'scale(1.1)';
                         container.insertBefore(bg, this);
                     } else {
-                        // Se for Widescreen (16:9), preenche tudo
+                        // Imagens Padrão (TV)
                         this.style.objectFit = "cover";
                     }
                     this.style.opacity = "1";
