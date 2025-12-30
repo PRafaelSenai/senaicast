@@ -3,233 +3,429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Digital SENAI</title>
+    <title>Painel SENAI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Fontes do Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Roboto', sans-serif; overflow: hidden; background-color: #000; }
+        /* Variáveis Padrão */
+        :root { 
+            --primary-color: #E30613; 
+            --accent-color: #0047B6; 
+            --text-scale: 1.0; 
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            
+            /* Ticker & Separador */
+            --ticker-bg: #0047B6;
+            --ticker-color: #FFFFFF;
+            --ticker-duration: 30s;
+            --separator-color: #ffffff; 
+            --separator-spacing: 0.5rem; 
+            --separator-size: 1.5rem;
+        }
+
+        body { 
+            font-family: var(--font-family); 
+            background-color: #1a1a1a; 
+            color: white; 
+            overflow: hidden; 
+            font-size: calc(1rem * var(--text-scale)); 
+        }
+
+        /* Layout Responsivo */
+        #tv-container { 
+            width: 100vw; 
+            height: 100vh; 
+            display: grid; 
+            grid-template-rows: auto 1fr auto; 
+            background: #000; 
+        }
+
+        /* Cabeçalho */
+        .header-bar { 
+            background-color: var(--primary-color); 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 0 2rem; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+            z-index: 30; 
+            height: 80px; 
+        }
+        @media (max-width: 768px) {
+            .header-bar { height: 60px; padding: 0 0.5rem; }
+            .logo-img { height: 35px !important; }
+            .school-name { font-size: 1rem !important; }
+            #clock-time { font-size: 1.2rem !important; }
+            #clock-date { display: none; }
+        }
+
+        .logo-img { height: 50px; object-fit: contain; background: white; padding: 5px; border-radius: 4px; }
+        .school-name { color: white; font-size: 1.25rem; font-weight: 700; line-height: 1.1; border-left: 3px solid white; padding-left: 1rem; display: flex; align-items: center; height: 40px; }
+
+        /* Área de Conteúdo */
+        .content-area { 
+            display: grid; 
+            grid-template-columns: 35% 65%; 
+            overflow: hidden; 
+            position: relative; 
+        }
+        /* Mobile: Empilha */
+        @media (max-width: 768px) {
+            .content-area { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .sidebar { padding: 1rem !important; height: auto; min-height: 30%; }
+            .media-viewer { height: 100%; min-height: 50%; }
+            #slide-title { font-size: 1.5rem !important; }
+            #slide-message { font-size: 1rem !important; -webkit-line-clamp: 4; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+        }
+
+        .content-area.layout-fullscreen { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+        .content-area.layout-fullscreen .sidebar { display: none; }
+
+        .sidebar { 
+            background: linear-gradient(135deg, var(--primary-color) 0%, #7f1d1d 100%); 
+            padding: 3rem; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            box-shadow: 5px 0 15px rgba(0,0,0,0.3); 
+            z-index: 10; 
+        }
+
+        .media-viewer { 
+            position: relative; 
+            background: #000; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
         
-        /* CORREÇÃO DO CORTE DA IMAGEM 
-           Se você usar o seu código antigo, COPIE este bloco CSS para ele.
-        */
-        .media-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #000; /* Fundo preto para sobras */
+        /* Estilos Base para Mídia */
+        .media-viewer img, .media-viewer video, .media-viewer iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+            /* object-fit é controlado via JS */
+        }
+        
+        .media-viewer iframe { object-fit: contain; }
+
+        /* Ticker Style */
+        .news-ticker { 
+            background-color: var(--ticker-bg); 
+            color: var(--ticker-color); 
+            height: 60px; 
+            display: grid; 
+            grid-template-columns: auto 1fr; 
+            align-items: stretch; 
+            overflow: hidden; 
+            font-weight: bold; 
+            font-size: 1.5rem; 
+            white-space: nowrap; 
+            z-index: 20; 
+        }
+        @media (max-width: 768px) {
+            .news-ticker { height: 40px; font-size: 1rem; }
+            .ticker-label { padding: 0 1rem; }
         }
 
-        .media-content {
-            /* Força a imagem a caber inteira na área disponível */
-            width: 100%;
-            height: 100%;
-            object-fit: contain; /* O SEGREDO: 'contain' nunca corta. 'cover' corta. */
-            display: block;
+        .ticker-label { 
+            background-color: rgba(0,0,0,0.2); 
+            color: inherit; 
+            padding: 0 2rem; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: 800; letter-spacing: 1px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 21; 
         }
-
-        /* Animação do rodapé */
-        @keyframes ticker {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-        .animate-ticker {
+        .ticker-track { overflow: hidden; display: flex; align-items: center; position: relative; }
+        .ticker-content { display: inline-block; padding-left: 100%; animation: ticker var(--ticker-duration) linear infinite; }
+        
+        /* Separador */
+        .ticker-separator { 
+            color: var(--separator-color) !important; 
+            margin: 0 var(--separator-spacing); 
+            font-size: var(--separator-size); 
+            vertical-align: middle; 
+            line-height: 0; 
+            position: relative; 
+            top: -2px; 
             display: inline-block;
-            white-space: nowrap;
-            animation: ticker 35s linear infinite;
-            padding-left: 100%;
+            text-shadow: 0 0 5px rgba(0,0,0,0.3); 
+        }
+        
+        @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+        
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: white; display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s; }
+        
+        .error-message {
+            color: #666;
+            text-align: center;
+            font-family: monospace;
+            padding: 20px;
+            background: #111;
+            border-radius: 8px;
+            border: 1px solid #333;
+            z-index: 10;
         }
     </style>
 </head>
-<body class="flex flex-col h-screen bg-gray-100">
+<body>
+    <div id="loading-overlay"><div><i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-blue-500"></i><br>Iniciando Sistema...</div></div>
 
-    <!-- 
-      TELA DE DESBLOQUEIO DE SOM (OBRIGATÓRIO)
-      Sem isso, o navegador bloqueia o áudio dos vídeos.
-    -->
-    <div id="start-screen" class="fixed inset-0 z-[9999] bg-blue-900 flex flex-col items-center justify-center cursor-pointer">
-        <div class="bg-white p-6 rounded-full shadow-xl mb-4">
-            <i data-lucide="play" class="w-12 h-12 text-blue-900 fill-current ml-1"></i>
+    <div id="tv-container" class="opacity-0 transition-opacity duration-1000">
+        <div class="header-bar">
+            <div class="flex items-center gap-4 h-full">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/SENAI_S%C3%A3o_Paulo_logo.png/1200px-SENAI_S%C3%A3o_Paulo_logo.png" alt="Logo" class="logo-img">
+                <h1 class="school-name" id="display-school-name">SENAI</h1>
+            </div>
+            <div class="text-right text-white">
+                <div id="clock-time" class="text-3xl font-mono font-bold leading-none">00:00</div>
+                <div id="clock-date" class="text-xs font-bold uppercase text-gray-200">Data...</div>
+            </div>
         </div>
-        <h1 class="text-white text-3xl font-bold">Clique para Iniciar Painel</h1>
-        <p class="text-blue-200 mt-2">Necessário para ativar o som</p>
+
+        <div class="content-area" id="main-layout">
+            <!-- Sidebar de Texto -->
+            <div class="sidebar">
+                <div class="mb-4">
+                    <span id="slide-badge" class="inline-block px-3 py-1 rounded bg-white text-[#E30613] font-bold text-sm uppercase mb-3 shadow-lg flex items-center w-max gap-2">
+                        <i id="slide-icon" class="fas fa-info-circle"></i>
+                        <span id="slide-category">...</span>
+                    </span>
+                    <h2 id="slide-title" class="text-4xl md:text-5xl font-bold leading-tight mb-4 break-words">...</h2>
+                </div>
+                <div id="slide-message" class="text-lg md:text-xl leading-relaxed border-l-4 border-white pl-4 opacity-90 break-words">...</div>
+            </div>
+            
+            <!-- Viewer de Mídia -->
+            <div class="media-viewer" id="media-container"></div>
+        </div>
+
+        <div class="news-ticker">
+            <div class="ticker-label">AVISOS</div>
+            <div class="ticker-track">
+                <div class="ticker-content" id="display-ticker">...</div>
+            </div>
+        </div>
     </div>
 
-    <!-- CABEÇALHO (Ajuste aqui seu Logo e Nome) -->
-    <header class="h-20 bg-white shadow-md flex items-center justify-between px-6 z-10 shrink-0 relative">
-        <!-- Faixa vermelha decorativa padrão SENAI -->
-        <div class="absolute top-0 left-0 w-full h-1 bg-red-600"></div>
-
-        <div class="flex items-center gap-4">
-            <!-- COLOQUE AQUI A URL DO SEU LOGO -->
-            <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/SENAI_São_Paulo_logo.png" alt="Logo SENAI" class="h-12 object-contain">
-            
-            <div class="h-8 w-px bg-gray-300 mx-2"></div>
-            
-            <!-- SEU TÍTULO AQUI -->
-            <div>
-                <h1 class="text-xl font-bold text-gray-800 tracking-tight leading-tight">MURAL DIGITAL</h1>
-                <p class="text-xs text-gray-500 font-medium">Informação e Tecnologia</p>
-            </div>
-        </div>
-
-        <!-- Relógio -->
-        <div class="flex items-center gap-4 text-right">
-            <div>
-                <div id="clock-time" class="text-3xl font-bold text-blue-900 leading-none">00:00</div>
-                <div id="clock-date" class="text-xs text-gray-500 font-bold uppercase">DATA</div>
-            </div>
-        </div>
-    </header>
-
-    <!-- ÁREA CENTRAL (Onde passam os slides) -->
-    <!-- Flex-grow ocupa todo espaço que sobra entre cabeçalho e rodapé -->
-    <main class="flex-grow bg-black relative w-full overflow-hidden">
-        <div id="slide-container" class="w-full h-full">
-            <!-- O Javascript injeta as imagens aqui -->
-        </div>
-        <!-- Barra de Progresso -->
-        <div id="progress-bar" class="absolute bottom-0 left-0 h-1 bg-red-600 z-20 w-0"></div>
-    </main>
-
-    <!-- RODAPÉ -->
-    <footer class="h-14 bg-blue-800 text-white flex items-center overflow-hidden shrink-0 z-10 relative">
-        <div class="bg-blue-900 px-4 h-full flex items-center font-bold z-20 shadow-lg">
-            <i data-lucide="bell" class="w-5 h-5 mr-2 text-yellow-400"></i>
-            AVISOS:
-        </div>
-        <div class="w-full overflow-hidden flex items-center">
-            <div class="animate-ticker text-lg font-medium">
-                Bem-vindo ao SENAI! • Inscrições abertas para novos cursos técnicos. • Mantenha os laboratórios organizados. • Segurança em primeiro lugar.
-            </div>
-        </div>
-    </footer>
-
     <script>
-        // --- CONFIGURE SEUS SLIDES AQUI ---
-        const slides = [
-            {
-                type: 'image',
-                // Imagem criada no tamanho 1920x940 (ou Full HD 1920x1080)
-                url: 'https://placehold.co/1920x940/png?text=Slide+1+Sem+Corte', 
-                duration: 5000
-            },
-            {
-                type: 'video',
-                // Vídeo com som
-                url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', 
-                duration: 0 // 0 usa a duração do vídeo
-            },
-            {
-                type: 'image',
-                url: 'https://placehold.co/1920x1080/red/white?text=Imagem+Padrao+FullHD+(Nao+Corta)',
-                duration: 5000
-            }
-        ];
+        // --- 🔴 CONFIGURAÇÃO SUPABASE 🔴 ---
+        const SUPABASE_URL = "https://pmnmudyseicnroypcmcp.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_WCG4H3nty0gT0LevuIoPFw_ro40Huqh"; 
+        // -----------------------------------
 
-        let currentSlide = 0;
-        const container = document.getElementById('slide-container');
-        const progressBar = document.getElementById('progress-bar');
-        const startScreen = document.getElementById('start-screen');
-        let isPlaying = false;
+        let supabaseClient;
+        let SYSTEM_CONFIG = {};
+        let currentSlideIndex = 0;
+        let slideTimer = null;
 
-        // Inicializa ícones
-        lucide.createIcons();
+        window.onload = () => { initSupabase(); };
 
-        // INICIAR COM SOM (Clique Obrigatório)
-        startScreen.addEventListener('click', () => {
-            startScreen.style.opacity = '0';
-            setTimeout(() => {
-                startScreen.style.display = 'none';
-                isPlaying = true;
-                nextSlide(); // Começa
+        function initSupabase() {
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 
-                // Tenta tela cheia (Com proteção contra erro de permissão)
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen().catch(e => {
-                        console.warn("Modo Tela Cheia bloqueado pelo navegador/iframe. O painel continuará em modo janela.", e);
+                // INSCRIÇÃO EM TEMPO REAL
+                supabaseClient.channel('public:app_config')
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_config', filter: 'id=eq.1' }, payload => {
+                        if (payload.new && payload.new.data) {
+                            SYSTEM_CONFIG = payload.new.data;
+                            applyGlobalSettings();
+                            if(!slideTimer) initTV(); 
+                        }
+                    })
+                    .subscribe();
+
+                loadData();
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadData() {
+            const { data } = await supabaseClient.from('app_config').select('data').eq('id', 1).single();
+            if (data && data.data) {
+                SYSTEM_CONFIG = data.data;
+                applyGlobalSettings();
+                const loader = document.getElementById('loading-overlay');
+                if(loader) { loader.style.opacity = '0'; setTimeout(()=>loader.remove(),500); }
+                document.getElementById('tv-container').classList.remove('opacity-0');
+                initTV();
+            }
+        }
+
+        function applyGlobalSettings() {
+            const root = document.documentElement;
+            // Cores
+            root.style.setProperty('--primary-color', SYSTEM_CONFIG.primaryColor || '#E30613');
+            root.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor || '#0047B6');
+            root.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom || "1.0");
+            root.style.setProperty('--font-family', SYSTEM_CONFIG.fontFamily || "'Segoe UI', sans-serif");
+            
+            // Separadores
+            root.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor || '#ffffff');
+            root.style.setProperty('--separator-spacing', (SYSTEM_CONFIG.separatorSpacing || 0.5) + 'rem');
+            root.style.setProperty('--separator-size', (SYSTEM_CONFIG.separatorSize || 1.5) + 'rem');
+            
+            // Ticker
+            root.style.setProperty('--ticker-bg', SYSTEM_CONFIG.tickerBg || SYSTEM_CONFIG.accentColor || '#0047B6');
+            root.style.setProperty('--ticker-color', SYSTEM_CONFIG.tickerColor || '#FFFFFF');
+            root.style.setProperty('--ticker-duration', (SYSTEM_CONFIG.tickerSpeed || 30) + 's');
+            
+            // Texto
+            document.getElementById('display-school-name').innerText = SYSTEM_CONFIG.schoolName || "SENAI";
+            const sepHtml = `<span class="ticker-separator">•</span>`;
+            document.getElementById('display-ticker').innerHTML = (SYSTEM_CONFIG.tickerText || "").replace(/\|/g, sepHtml);
+        }
+
+        function initTV() {
+            const now = new Date();
+            let activeSlides = (SYSTEM_CONFIG.slides || []).filter(s => {
+                const start = s.startDate ? new Date(s.startDate) : null;
+                const end = s.endDate ? new Date(s.endDate) : null;
+                if (start && !isNaN(start.getTime()) && now < start) return false;
+                if (end && !isNaN(end.getTime()) && now > end) return false;
+                return true;
+            });
+
+            if (activeSlides.length === 0) {
+                renderPlaceholder();
+                clearTimeout(slideTimer);
+                slideTimer = setTimeout(initTV, 5000);
+                return;
+            }
+
+            if (currentSlideIndex >= activeSlides.length) currentSlideIndex = 0;
+            const slide = activeSlides[currentSlideIndex];
+            renderSlide(slide);
+
+            clearTimeout(slideTimer);
+            let duration = (slide.duration || 10) * 1000;
+            if (slide.mediaType === 'video') duration += 5000; // Buffer segurança
+
+            slideTimer = setTimeout(() => {
+                currentSlideIndex++;
+                initTV();
+            }, duration);
+        }
+
+        // --- RENDERIZAÇÃO INTELIGENTE DE FORMATO ---
+        function renderSlide(slide) {
+            // Texto
+            document.getElementById('slide-category').innerText = slide.category || '';
+            const iconClass = slide.categoryIcon || 'fas fa-info-circle';
+            document.getElementById('slide-icon').className = iconClass;
+            document.getElementById('slide-title').innerText = slide.title || '';
+            document.getElementById('slide-message').innerText = slide.message || '';
+            
+            // Layout
+            const layout = document.getElementById('main-layout');
+            if (slide.layout === 'fullscreen') layout.classList.add('layout-fullscreen');
+            else layout.classList.remove('layout-fullscreen');
+
+            const container = document.getElementById('media-container');
+            container.innerHTML = '';
+            
+            // Tratamento de Erro
+            const errorHandler = () => {
+                console.warn("Falha ao carregar mídia:", slide.url);
+                container.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle text-4xl mb-2 text-yellow-500"></i><br>Mídia Indisponível<br>Avançando...</div>';
+                clearTimeout(slideTimer);
+                slideTimer = setTimeout(() => { currentSlideIndex++; initTV(); }, 3000);
+            };
+
+            if (slide.mediaType === 'video') {
+                const el = document.createElement('video');
+                el.src = slide.url; 
+                el.autoplay = true; 
+                el.muted = false; // Tenta com som
+                
+                const playPromise = el.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.log("Autoplay bloqueado. Mudo.");
+                        el.muted = true;
+                        el.play();
                     });
                 }
-            }, 500);
-        });
 
-        function nextSlide() {
-            if (!isPlaying) return;
-
-            const slide = slides[currentSlide];
-            container.innerHTML = ''; // Limpa anterior
+                el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
+                el.onerror = errorHandler;
+                // Videos sempre preenchem
+                el.style.width = "100%";
+                el.style.height = "100%";
+                el.style.objectFit = "cover";
+                container.appendChild(el);
             
-            // Reseta barra
-            progressBar.style.transition = 'none';
-            progressBar.style.width = '0%';
-
-            const wrapper = document.createElement('div');
-            wrapper.className = 'media-container';
-
-            if (slide.type === 'image') {
+            } else if (slide.mediaType === 'iframe') {
+                const el = document.createElement('iframe');
+                el.src = slide.url; 
+                el.allow = "autoplay; encrypted-media";
+                el.onerror = errorHandler;
+                container.appendChild(el);
+            
+            } else {
+                // IMAGEM
                 const img = document.createElement('img');
                 img.src = slide.url;
-                img.className = 'media-content animate-fade';
-                wrapper.appendChild(img);
-                container.appendChild(wrapper);
+                img.style.width = "100%";
+                img.style.height = "100%";
+                img.style.position = "relative";
+                img.style.zIndex = "2";
+                img.style.opacity = "0"; 
+                img.style.transition = "opacity 0.5s";
 
-                // Inicia tempo
-                runProgressBar(slide.duration);
-                setTimeout(() => {
-                    advanceIndex();
-                    nextSlide();
-                }, slide.duration);
-            } 
-            else if (slide.type === 'video') {
-                const video = document.createElement('video');
-                video.src = slide.url;
-                video.className = 'media-content';
-                video.autoplay = true;
-                video.muted = false; // Tenta com som
-                
-                // Se der erro de som, tenta mudo
-                video.play().catch(() => {
-                    video.muted = true;
-                    video.play();
-                });
+                img.onload = function() {
+                    // BLINDAGEM
+                    if (this.parentNode !== container) return;
 
-                video.onended = () => {
-                    advanceIndex();
-                    nextSlide();
+                    const ratio = this.naturalWidth / this.naturalHeight;
+                    
+                    // LÓGICA DE CORTE:
+                    // Se ratio < 1.2 (Quadrada 1.0 ou Vertical 0.56) -> USA CONTAIN + BLUR
+                    // Se ratio >= 1.2 (4:3=1.33, 16:9=1.77, etc) -> USA COVER (Padrão)
+                    
+                    if (ratio < 1.2) {
+                        this.style.objectFit = "contain"; 
+                        
+                        // Fundo Desfocado
+                        const bg = document.createElement('div');
+                        bg.style.position = 'absolute';
+                        bg.style.inset = '0';
+                        bg.style.backgroundImage = `url('${slide.url}')`;
+                        bg.style.backgroundSize = 'cover';
+                        bg.style.backgroundPosition = 'center';
+                        bg.style.filter = 'blur(20px) brightness(0.5)';
+                        bg.style.zIndex = '1';
+                        bg.style.transform = 'scale(1.1)';
+                        container.insertBefore(bg, this);
+                    } else {
+                        // Imagens Padrão (TV)
+                        this.style.objectFit = "cover";
+                    }
+                    this.style.opacity = "1";
                 };
-
-                wrapper.appendChild(video);
-                container.appendChild(wrapper);
                 
-                // Barra baseada na duração do vídeo
-                video.onloadedmetadata = () => {
-                    runProgressBar(video.duration * 1000);
-                };
+                img.onerror = errorHandler;
+                container.appendChild(img);
             }
         }
 
-        function advanceIndex() {
-            currentSlide = (currentSlide + 1) % slides.length;
+        function renderPlaceholder() {
+            document.getElementById('slide-title').innerText = "Aguardando";
+            document.getElementById('slide-message').innerText = "Nenhum conteúdo no ar.";
+            document.getElementById('media-container').innerHTML = '';
         }
 
-        function runProgressBar(ms) {
-            setTimeout(() => {
-                progressBar.style.transition = `width ${ms}ms linear`;
-                progressBar.style.width = '100%';
-            }, 50);
-        }
-
-        // Relógio
-        function updateClock() {
+        setInterval(() => {
             const now = new Date();
-            document.getElementById('clock-time').textContent = now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-            document.getElementById('clock-date').textContent = now.toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'short'}).toUpperCase();
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-
+            document.getElementById('clock-time').innerText = now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+            document.getElementById('clock-date').innerText = now.toLocaleDateString('pt-BR', {weekday: 'long', day: 'numeric', month: 'long'});
+        }, 1000);
     </script>
 </body>
 </html>
