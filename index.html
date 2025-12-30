@@ -95,7 +95,6 @@
             z-index: 10; 
         }
 
-        /* --- VIEWER DE MÍDIA COM EFEITO DE FUNDO --- */
         .media-viewer { 
             position: relative; 
             background: #000; 
@@ -107,37 +106,15 @@
             overflow: hidden;
         }
         
-        /* Fundo Desfocado (Blur) */
-        .media-background {
-            position: absolute;
-            inset: 0;
-            background-size: cover;
-            background-position: center;
-            filter: blur(20px) brightness(0.5); /* Desfoque e escurecimento */
-            z-index: 1;
-            transform: scale(1.1); /* Evita bordas brancas do blur */
-        }
-
-        /* Mídia Principal */
-        .media-content {
-            position: relative;
-            z-index: 2;
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
-            object-fit: contain; /* O SEGREDO: Nunca corta a imagem */
-            box-shadow: 0 0 20px rgba(0,0,0,0.5); /* Sombra para destacar do fundo */
-        }
-        
-        .media-viewer iframe, .media-viewer video { 
-            position: relative;
-            z-index: 2;
+        /* Estilos Base para Mídia */
+        .media-viewer img, .media-viewer video, .media-viewer iframe { 
             width: 100%; 
             height: 100%; 
-            object-fit: contain; 
             border: none; 
+            /* object-fit é controlado via JS agora */
         }
+        
+        .media-viewer iframe { object-fit: contain; }
 
         /* Ticker Style */
         .news-ticker { 
@@ -336,7 +313,7 @@
             }, duration);
         }
 
-        // --- RENDERIZAÇÃO INTELIGENTE (Fundo Desfocado) ---
+        // --- RENDERIZAÇÃO BLINDADA E INTELIGENTE ---
         function renderSlide(slide) {
             // Texto
             document.getElementById('slide-category').innerText = slide.category || '';
@@ -362,22 +339,24 @@
             };
 
             if (slide.mediaType === 'video') {
-                // Vídeo simples com contain
                 const el = document.createElement('video');
                 el.src = slide.url; 
                 el.autoplay = true; 
-                el.muted = false; 
+                el.muted = false; // Tenta com som
                 
+                // Tenta tocar com som, se falhar (padrão de navegadores), toca mudo
                 const playPromise = el.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        console.log("Autoplay bloqueado. Mudo ativado.");
-                        el.muted = true; el.play();
+                        console.log("Autoplay com som bloqueado pelo navegador. Ativando mudo.");
+                        el.muted = true;
+                        el.play();
                     });
                 }
+
                 el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
                 el.onerror = errorHandler;
-                el.className = "media-content";
+                el.className = "h-full w-full object-cover";
                 container.appendChild(el);
             
             } else if (slide.mediaType === 'iframe') {
@@ -385,23 +364,49 @@
                 el.src = slide.url; 
                 el.allow = "autoplay; encrypted-media";
                 el.onerror = errorHandler;
-                el.className = "media-content";
-                // Iframes ocupam tudo, sem blur
-                el.style.width = "100%"; el.style.height = "100%";
                 container.appendChild(el);
             
             } else {
-                // IMAGEM COM FUNDO DESFOCADO
-                // 1. Fundo (Blur)
-                const bg = document.createElement('div');
-                bg.className = 'media-background';
-                bg.style.backgroundImage = `url('${slide.url}')`;
-                container.appendChild(bg);
-
-                // 2. Imagem Principal (Contain)
+                // --- LÓGICA INTELIGENTE DE IMAGEM ---
                 const img = document.createElement('img');
                 img.src = slide.url;
-                img.className = "media-content";
+                img.style.width = "100%";
+                img.style.height = "100%";
+                img.style.position = "relative";
+                img.style.zIndex = "2";
+                img.style.opacity = "0"; // Começa invisível para cálculo
+                img.style.transition = "opacity 0.5s";
+
+                img.onload = function() {
+                    // BLINDAGEM CONTRA ERRO INSERTBEFORE
+                    // Verifica se o container ainda é o pai da imagem (se o slide não mudou)
+                    if (this.parentNode !== container) return;
+
+                    const ratio = this.naturalWidth / this.naturalHeight;
+                    
+                    // Se a imagem for "estreita" (Vertical/Quadrada - Ratio < 1.55)
+                    // E se não for um layout fullscreen forçado que exija cover
+                    if (ratio < 1.55) {
+                        this.style.objectFit = "contain"; // Mostra inteira sem cortar
+                        
+                        // Cria fundo desfocado bonito
+                        const bg = document.createElement('div');
+                        bg.style.position = 'absolute';
+                        bg.style.inset = '0';
+                        bg.style.backgroundImage = `url('${slide.url}')`;
+                        bg.style.backgroundSize = 'cover';
+                        bg.style.backgroundPosition = 'center';
+                        bg.style.filter = 'blur(20px) brightness(0.5)';
+                        bg.style.zIndex = '1';
+                        bg.style.transform = 'scale(1.1)';
+                        container.insertBefore(bg, this);
+                    } else {
+                        // Se for Widescreen (16:9), preenche tudo
+                        this.style.objectFit = "cover";
+                    }
+                    this.style.opacity = "1";
+                };
+                
                 img.onerror = errorHandler;
                 container.appendChild(img);
             }
