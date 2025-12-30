@@ -6,6 +6,8 @@
     <title>Painel SENAI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Fontes do Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -14,6 +16,7 @@
             --primary-color: #E30613; 
             --accent-color: #0047B6; 
             --text-scale: 1.0; 
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             
             /* Ticker & Separador */
             --ticker-bg: #0047B6;
@@ -25,7 +28,7 @@
         }
 
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: var(--font-family); 
             background-color: #1a1a1a; 
             color: white; 
             overflow: hidden; 
@@ -70,7 +73,7 @@
             overflow: hidden; 
             position: relative; 
         }
-        /* Mobile: Empilha (Texto em cima, Mídia embaixo) */
+        /* Mobile: Empilha */
         @media (max-width: 768px) {
             .content-area { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
             .sidebar { padding: 1rem !important; height: auto; min-height: 30%; }
@@ -92,6 +95,7 @@
             z-index: 10; 
         }
 
+        /* --- VIEWER DE MÍDIA COM EFEITO DE FUNDO --- */
         .media-viewer { 
             position: relative; 
             background: #000; 
@@ -103,18 +107,37 @@
             overflow: hidden;
         }
         
-        /* Ajuste de imagem no celular: contain para não cortar */
-        .media-viewer img, .media-viewer video { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            border: none; 
+        /* Fundo Desfocado (Blur) */
+        .media-background {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            filter: blur(20px) brightness(0.5); /* Desfoque e escurecimento */
+            z-index: 1;
+            transform: scale(1.1); /* Evita bordas brancas do blur */
         }
-        @media (max-width: 768px) {
-            .media-viewer img { object-fit: contain; } /* No celular mostra inteira */
+
+        /* Mídia Principal */
+        .media-content {
+            position: relative;
+            z-index: 2;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain; /* O SEGREDO: Nunca corta a imagem */
+            box-shadow: 0 0 20px rgba(0,0,0,0.5); /* Sombra para destacar do fundo */
         }
         
-        .media-viewer iframe { width: 100%; height: 100%; border:none; object-fit: contain; }
+        .media-viewer iframe, .media-viewer video { 
+            position: relative;
+            z-index: 2;
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            border: none; 
+        }
 
         /* Ticker Style */
         .news-ticker { 
@@ -170,6 +193,7 @@
             background: #111;
             border-radius: 8px;
             border: 1px solid #333;
+            z-index: 10;
         }
     </style>
 </head>
@@ -263,6 +287,7 @@
             root.style.setProperty('--primary-color', SYSTEM_CONFIG.primaryColor || '#E30613');
             root.style.setProperty('--accent-color', SYSTEM_CONFIG.accentColor || '#0047B6');
             root.style.setProperty('--text-scale', SYSTEM_CONFIG.zoom || "1.0");
+            root.style.setProperty('--font-family', SYSTEM_CONFIG.fontFamily || "'Segoe UI', sans-serif");
             
             // Separadores
             root.style.setProperty('--separator-color', SYSTEM_CONFIG.separatorColor || '#ffffff');
@@ -303,7 +328,7 @@
 
             clearTimeout(slideTimer);
             let duration = (slide.duration || 10) * 1000;
-            if (slide.mediaType === 'video') duration += 5000; 
+            if (slide.mediaType === 'video') duration += 5000; // Buffer segurança
 
             slideTimer = setTimeout(() => {
                 currentSlideIndex++;
@@ -311,7 +336,7 @@
             }, duration);
         }
 
-        // --- RENDERIZAÇÃO BLINDADA ---
+        // --- RENDERIZAÇÃO INTELIGENTE (Fundo Desfocado) ---
         function renderSlide(slide) {
             // Texto
             document.getElementById('slide-category').innerText = slide.category || '';
@@ -328,8 +353,7 @@
             const container = document.getElementById('media-container');
             container.innerHTML = '';
             
-            // Mídia com Tratamento de Erro
-            let el;
+            // Tratamento de Erro
             const errorHandler = () => {
                 console.warn("Falha ao carregar mídia:", slide.url);
                 container.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle text-4xl mb-2 text-yellow-500"></i><br>Mídia Indisponível<br>Avançando...</div>';
@@ -338,36 +362,49 @@
             };
 
             if (slide.mediaType === 'video') {
-                el = document.createElement('video');
+                // Vídeo simples com contain
+                const el = document.createElement('video');
                 el.src = slide.url; 
                 el.autoplay = true; 
-                el.muted = false; // Tenta com som
+                el.muted = false; 
                 
                 const playPromise = el.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        console.log("Autoplay com som bloqueado. Tentando mudo.");
-                        el.muted = true;
-                        el.play();
+                        console.log("Autoplay bloqueado. Mudo ativado.");
+                        el.muted = true; el.play();
                     });
                 }
-
                 el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
                 el.onerror = errorHandler;
-                el.className = "h-full w-full object-cover";
+                el.className = "media-content";
+                container.appendChild(el);
             
             } else if (slide.mediaType === 'iframe') {
-                el = document.createElement('iframe');
+                const el = document.createElement('iframe');
                 el.src = slide.url; 
                 el.allow = "autoplay; encrypted-media";
                 el.onerror = errorHandler;
+                el.className = "media-content";
+                // Iframes ocupam tudo, sem blur
+                el.style.width = "100%"; el.style.height = "100%";
+                container.appendChild(el);
             
             } else {
-                el = document.createElement('img');
-                el.src = slide.url;
-                el.onerror = errorHandler;
+                // IMAGEM COM FUNDO DESFOCADO
+                // 1. Fundo (Blur)
+                const bg = document.createElement('div');
+                bg.className = 'media-background';
+                bg.style.backgroundImage = `url('${slide.url}')`;
+                container.appendChild(bg);
+
+                // 2. Imagem Principal (Contain)
+                const img = document.createElement('img');
+                img.src = slide.url;
+                img.className = "media-content";
+                img.onerror = errorHandler;
+                container.appendChild(img);
             }
-            container.appendChild(el);
         }
 
         function renderPlaceholder() {
