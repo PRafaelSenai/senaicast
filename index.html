@@ -172,6 +172,17 @@
             font-weight: bold; font-size: 1.5rem; margin-top: 1rem; 
             transition: all 0.3s; display: flex; align-items: center; gap: 10px;
         }
+
+        /* Botão Flutuante de Audio */
+        #audio-control {
+            position: fixed; bottom: 80px; right: 20px; 
+            width: 50px; height: 50px; border-radius: 50%;
+            background: rgba(0,0,0,0.6); color: white; border: 2px solid white;
+            display: none; align-items: center; justify-content: center;
+            font-size: 1.2rem; cursor: pointer; z-index: 50;
+            transition: all 0.3s;
+        }
+        #audio-control:hover { background: #E30613; }
         
         .error-message {
             color: #666; text-align: center; font-family: monospace; padding: 20px;
@@ -186,6 +197,11 @@
         <div class="start-btn"><i class="fas fa-play"></i> Clique para Iniciar a TV</div>
         <div class="mt-4 text-gray-500 text-sm">Necessário para habilitar o som automático</div>
     </div>
+
+    <!-- Botão de Controle de Áudio -->
+    <button id="audio-control" onclick="toggleMute()">
+        <i class="fas fa-volume-mute"></i>
+    </button>
 
     <div id="tv-container" class="opacity-0 transition-opacity duration-1000">
         <div class="header-bar">
@@ -235,24 +251,47 @@
         let currentSlideIndex = 0;
         let slideTimer = null;
         let isStarted = false;
+        let currentVideoElement = null; // Para controle manual de volume
 
         window.onload = () => { initSupabase(); };
 
         function startSystem() {
+            // HACK DE AUDIO SILENCIOSO: Toca 1s de silencio para desbloquear o motor de audio do navegador
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            gain.gain.value = 0.0001; // Quase mudo
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+
             const overlay = document.getElementById('start-overlay');
             overlay.style.opacity = '0';
             setTimeout(() => overlay.remove(), 500);
             
-            // Tenta desbloquear o contexto de áudio
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-                const ctx = new AudioContext();
-                ctx.resume();
-            }
-            
             isStarted = true;
             document.getElementById('tv-container').classList.remove('opacity-0');
             initTV();
+        }
+
+        function toggleMute() {
+            if (currentVideoElement) {
+                currentVideoElement.muted = !currentVideoElement.muted;
+                updateAudioIcon();
+            }
+        }
+
+        function updateAudioIcon() {
+            const btn = document.getElementById('audio-control');
+            const icon = btn.querySelector('i');
+            if (currentVideoElement && !currentVideoElement.muted) {
+                icon.className = 'fas fa-volume-up';
+                btn.style.background = '#E30613'; // Vermelho quando ativo
+            } else {
+                icon.className = 'fas fa-volume-mute';
+                btn.style.background = 'rgba(0,0,0,0.6)';
+            }
         }
 
         function initSupabase() {
@@ -352,6 +391,10 @@
             const container = document.getElementById('media-container');
             container.innerHTML = '';
             
+            // Esconde controle de áudio por padrão
+            document.getElementById('audio-control').style.display = 'none';
+            currentVideoElement = null;
+
             const errorHandler = () => {
                 console.warn("Falha mídia:", slide.url);
                 container.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle text-4xl mb-2 text-yellow-500"></i><br>Mídia Indisponível<br>Avançando...</div>';
@@ -362,19 +405,26 @@
                 const el = document.createElement('video');
                 el.src = slide.url; 
                 el.autoplay = true; 
+                el.muted = false; // Tenta SEM MUDO
+                el.playsInline = true;
                 
-                // Tenta tocar COM SOM porque o usuário já interagiu no início
-                el.muted = false; 
-                
+                // Exibe controle de áudio
+                const audioBtn = document.getElementById('audio-control');
+                audioBtn.style.display = 'flex';
+                currentVideoElement = el;
+                updateAudioIcon();
+
                 const playPromise = el.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        console.log("Autoplay c/ som falhou, tentando mudo.", error);
+                        console.log("Autoplay c/ som falhou. Mutando...", error);
                         el.muted = true;
                         el.play();
+                        updateAudioIcon(); // Atualiza ícone para mudo
                     });
                 }
 
+                el.onvolumechange = () => updateAudioIcon();
                 el.onended = () => { clearTimeout(slideTimer); currentSlideIndex++; initTV(); };
                 el.onerror = errorHandler;
                 
@@ -384,7 +434,7 @@
                 el.style.objectFit = "contain"; 
                 el.style.zIndex = "2";
                 
-                // Fundo borrado para vídeo também (opcional, mas fica bonito)
+                // Fundo borrado para vídeo
                 const bg = document.createElement('video');
                 bg.src = slide.url;
                 bg.autoplay = false;
@@ -425,10 +475,10 @@
 
                 img.onload = function() {
                     // Verifica preferência do slide ou usa padrão "fit" (sem cortes)
-                    const fitMode = slide.imageFit || 'contain'; // 'contain' (Ajustar) ou 'cover' (Preencher)
+                    const fitMode = slide.imageFit || 'contain'; 
 
                     if (fitMode === 'cover') {
-                        // Modo antigo (pode cortar)
+                        // Modo antigo (pode cortar para preencher)
                         this.style.objectFit = 'cover';
                     } else {
                         // Modo NOVO (Padrão): Nunca corta, usa fundo borrado
@@ -441,9 +491,9 @@
                         bg.style.backgroundImage = `url('${slide.url}')`;
                         bg.style.backgroundSize = 'cover';
                         bg.style.backgroundPosition = 'center';
-                        bg.style.filter = 'blur(25px) brightness(0.4)'; // Blur mais forte e escuro
+                        bg.style.filter = 'blur(25px) brightness(0.4)';
                         bg.style.zIndex = '1';
-                        bg.style.transform = 'scale(1.1)'; // Evita bordas brancas do blur
+                        bg.style.transform = 'scale(1.1)';
                         container.insertBefore(bg, this);
                     }
                     this.style.opacity = "1";
